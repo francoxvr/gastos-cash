@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  :root {
+    /* Fondo y Texto Principal */
+    --background: 210 20% 98%;
+    --foreground: 220 20% 10%;
+
+    /* Tarjetas y Contenedores */
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    /* Colores de Marca (Sólidos) */
+    --primary: 171 77% 40%; 
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 15% 94%;
+    --secondary-foreground: 220 20% 10%;
+
+    /* Estados y Alertas */
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Elementos de Interfaz Neutros */
+    --muted: 210 15% 94%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 171 77% 92%;
+    --accent-foreground: 171 77% 25%;
+    
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 171 77% 40%;
+
+    /* Colores para Gráficos */
+    --chart-1: 171 77% 40%;
+    --chart-2: 200 70% 50%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 220 15% 50%;
+
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 220 20% 8%;
+    --foreground: 210 20% 95%;
+    --card: 220 18% 12%;
+    --card-foreground: 210 20% 95%;
+    --popover: 220 18% 12%;
+    --popover-foreground: 210 20% 95%;
+    
+    --primary: 171 85% 45%; 
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 171 85% 15%;
+    --accent-foreground: 171 85% 75%;
+    
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 171 85% 45%;
+    --chart-1: 171 85% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- Animaciones Premium --- */
+
+@keyframes entrance {
+  from { 
+    opacity: 0; 
+    transform: translateY(15px) scale(0.98); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bar-grow {
+  from { 
+    transform: scaleX(0); 
+    transform-origin: left; 
+  }
+  to { 
+    transform: scaleX(1); 
+    transform-origin: left; 
+  }
+}
+
+/* Clases de utilidad para animar componentes */
+.animate-entrance {
+  animation: entrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+.animate-bar-grow {
+  animation: bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Efecto de tap en botones para móvil */
+.active-press:active {
+  transform: scale(0.96);
+  filter: brightness(0.9);
+  transition: all 0.1s ease;
+}
