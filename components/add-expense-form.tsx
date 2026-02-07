@@ -17,7 +17,7 @@ interface AddExpenseFormProps {
 }
 
 export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps) {
-  const { addExpense, categories } = useExpenses()
+  const { addExpense, updateExpense, categories } = useExpenses()
   const isEditing = !!editingExpense
 
   const getLocalDate = () => {
@@ -37,28 +37,31 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const isInvalid = !amount || Number.parseFloat(amount) <= 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (isInvalid) return
+  e.preventDefault()
+  if (isInvalid) return
 
-    setIsSubmitting(true)
+  setIsSubmitting(true)
 
-    // Obtener el nombre de la categoría
-    const categoryName = categories.find(c => c.id === category)?.label || category
+  const categoryName = categories.find(c => c.id === category)?.label || category
 
-    const expenseData = {
-      amount: Number.parseFloat(amount),
-      category,
-      date,
-      description: description.trim() || categoryName // Si está vacío, usar el nombre de la categoría
-    }
-
-    await addExpense(expenseData)
-
-    setTimeout(() => {
-      setIsSubmitting(false)
-      onClose()
-    }, 600)
+  const expenseData = {
+    amount: Number.parseFloat(amount),
+    category,
+    date,
+    description: description.trim() || categoryName
   }
+
+  if (isEditing && editingExpense) {
+    await updateExpense(editingExpense.id, expenseData)
+  } else {
+    await addExpense(expenseData)
+  }
+
+  setTimeout(() => {
+    setIsSubmitting(false)
+    onClose()
+  }, 600)
+}
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

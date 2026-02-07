@@ -22,6 +22,7 @@ interface ExpenseContextType {
   expenses: Expense[]
   categories: Category[]
   addExpense: (expense: Omit<Expense, "id">) => Promise<void>
+  updateExpense: (id: string, expense: Omit<Expense, "id">) => Promise<void>
   deleteExpense: (id: string) => Promise<void>
   clearAllExpenses: () => Promise<void>
   addCategory: (category: Omit<Category, "id">) => Promise<void>
@@ -136,6 +137,42 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateExpense = async (id: string, expenseData: Omit<Expense, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({
+          amount: expenseData.amount,
+          category: expenseData.category,
+          date: expenseData.date,
+          description: expenseData.description
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error actualizando gasto:', error)
+        alert('Error al actualizar el gasto: ' + error.message)
+        return
+      }
+
+      if (data) {
+        const updatedExpense: Expense = {
+          id: data.id,
+          amount: data.amount,
+          category: data.category,
+          date: data.date,
+          description: data.description || ''
+        }
+        setExpenses((prev) => prev.map(e => e.id === id ? updatedExpense : e))
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al actualizar el gasto')
+    }
+  }
+
   const deleteExpense = async (id: string) => {
     try {
       const { error } = await supabase
@@ -232,7 +269,8 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     <ExpenseContext.Provider value={{ 
       expenses, 
       categories,
-      addExpense, 
+      addExpense,
+      updateExpense,
       deleteExpense, 
       clearAllExpenses,
       addCategory,
