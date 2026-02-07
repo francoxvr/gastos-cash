@@ -88,10 +88,15 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   >
                     {emoji}
                   </div>
-                  <div className="flex flex-1 flex-col">
+                  <div className="flex flex-1 flex-col gap-0.5">
                     <span className={`font-medium ${expandedId === expense.id ? "text-primary-foreground" : "text-foreground"}`}>
                       {label}
                     </span>
+                    {expense.description && (
+                      <span className={`text-xs ${expandedId === expense.id ? "text-primary-foreground/70" : "text-muted-foreground/80"}`}>
+                        {expense.description}
+                      </span>
+                    )}
                     <span className={`text-sm ${expandedId === expense.id ? "text-primary-foreground/75" : "text-muted-foreground"}`}>
                       {formatDate(expense.date)}
                     </span>
@@ -155,3 +160,5 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
     </>
   )
 }
+
+

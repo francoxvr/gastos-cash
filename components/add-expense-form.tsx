@@ -17,7 +17,7 @@ interface AddExpenseFormProps {
 }
 
 export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps) {
-  const { addExpense, updateExpense, categories } = useExpenses()
+  const { addExpense, categories } = useExpenses()
   const isEditing = !!editingExpense
 
   const getLocalDate = () => {
@@ -31,28 +31,28 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const [amount, setAmount] = useState(isEditing ? editingExpense.amount.toString() : "")
   const [category, setCategory] = useState(isEditing ? editingExpense.category : categories[0]?.id || "")
   const [date, setDate] = useState(isEditing ? editingExpense.date : getLocalDate())
+  const [description, setDescription] = useState(isEditing ? editingExpense.description : "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Lógica de validación
   const isInvalid = !amount || Number.parseFloat(amount) <= 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isInvalid) return
 
     setIsSubmitting(true)
 
+    // Obtener el nombre de la categoría
+    const categoryName = categories.find(c => c.id === category)?.label || category
+
     const expenseData = {
       amount: Number.parseFloat(amount),
       category,
       date,
+      description: description.trim() || categoryName // Si está vacío, usar el nombre de la categoría
     }
 
-    if (isEditing) {
-      updateExpense(editingExpense.id, expenseData)
-    } else {
-      addExpense(expenseData)
-    }
+    await addExpense(expenseData)
 
     setTimeout(() => {
       setIsSubmitting(false)
@@ -86,7 +86,6 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               placeholder="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              // Evita que escriban caracteres no numéricos como +, - o e
               onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
               className="h-16 pl-8 text-3xl font-bold focus:shadow-lg"
               autoFocus
@@ -114,6 +113,18 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Label htmlFor="description" className="text-base font-medium">Descripción (opcional)</Label>
+          <Input
+            id="description"
+            type="text"
+            placeholder="Ej: Compra semanal"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="h-14 text-base focus:shadow-lg"
+          />
         </div>
 
         <div className="flex flex-col gap-3">
