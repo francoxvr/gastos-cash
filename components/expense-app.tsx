@@ -9,11 +9,11 @@ import { ExpenseCalendar } from "@/components/expense-calendar"
 import { CategoryManager } from "@/components/category-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
-// Importamos exportToCSV desde tus utilidades
+import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarHeart, Tag, Sun, Moon, ArrowLeft,
-  CalendarDays, CalendarClock, CalendarRange, Calendar, Trash2, Download
+  CalendarDays, CalendarClock, CalendarRange, Calendar, Trash2, Download, LogOut
 } from "lucide-react"
 
 type Screen = "home" | "add" | "edit" | "stats" | "calendar" | "categories"
@@ -26,6 +26,7 @@ export function ExpenseApp() {
   
   const { expenses, clearAllExpenses, currentMonth, currentYear } = useExpenses()
   const { theme, toggleTheme } = useTheme()
+  const { signOut } = useAuth()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
@@ -34,6 +35,12 @@ export function ExpenseApp() {
     const mensajeAmigable = "⚠️ ¿Vaciar toda tu cuenta?\n\nEsta acción borrará todos tus gastos de forma permanente y no se podrá deshacer. ¿Estás seguro de que quieres empezar de cero?";
     if (confirm(mensajeAmigable)) {
       await clearAllExpenses()
+    }
+  }
+
+  const handleSignOut = async () => {
+    if (confirm("¿Cerrar sesión?")) {
+      await signOut()
     }
   }
 
@@ -82,9 +89,8 @@ export function ExpenseApp() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-background/80 px-4 py-4 backdrop-blur-md">
-        <h1 className="text-2xl font-bold tracking-tight">Mis Gastos</h1>
+        <img src="/logo.png" alt="Gastos Cash" className="h-10 w-auto" />
         <div className="flex items-center gap-1">
-          {/* NUEVO: BOTÓN DE DESCARGA (Recuperado de tu diseño anterior) */}
           <button 
             onClick={() => exportToCSV(expenses)} 
             className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors"
@@ -107,6 +113,15 @@ export function ExpenseApp() {
           <button onClick={() => setCurrentScreen("categories")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"><Tag className="h-5 w-5" /></button>
           <button onClick={() => setCurrentScreen("calendar")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"><CalendarHeart className="h-5 w-5" /></button>
           <button onClick={() => setCurrentScreen("stats")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"><BarChart3 className="h-5 w-5" /></button>
+          
+          {/* NUEVO: Botón de cerrar sesión */}
+          <button 
+            onClick={handleSignOut} 
+            className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
       </header>
 
