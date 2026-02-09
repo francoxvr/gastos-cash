@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/context/auth-context"
 
 export interface Expense {
   id: string
@@ -38,24 +39,34 @@ interface ExpenseContextType {
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
 
 export function ExpenseProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
 
-  // Cargar gastos y categorías desde Supabase al iniciar
+  // Cargar gastos y categorías cuando el usuario cambia
   useEffect(() => {
-    loadExpenses()
-    loadCategories()
-  }, [])
+    if (user) {
+      loadExpenses()
+      loadCategories()
+    } else {
+      setExpenses([])
+      setCategories([])
+      setLoading(false)
+    }
+  }, [user])
 
   const loadExpenses = async () => {
+    if (!user) return
+    
     try {
       setLoading(true)
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
 
       if (error) {
@@ -81,10 +92,13 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const loadCategories = async () => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .or(`user_id.is.null,user_id.eq.${user.id}`)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -103,6 +117,8 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const getCategoryById = (id: string) => categories.find(cat => cat.id === id)
 
   const addExpense = async (expenseData: Omit<Expense, "id">) => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('expenses')
@@ -110,7 +126,8 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
           amount: expenseData.amount,
           category: expenseData.category,
           date: expenseData.date,
-          description: expenseData.description
+          description: expenseData.description,
+          user_id: user.id
         })
         .select()
         .single()
@@ -138,6 +155,8 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateExpense = async (id: string, expenseData: Omit<Expense, "id">) => {
+    if (!user) return
+    
     try {
       const { data, error } = await supabase
         .from('expenses')
@@ -148,6 +167,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
           description: expenseData.description
         })
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single()
 
@@ -174,11 +194,14 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteExpense = async (id: string) => {
+    if (!user) return
+    
     try {
       const { error } = await supabase
         .from('expenses')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id)
 
       if (error) {
         console.error('Error eliminando gasto:', error)
@@ -192,11 +215,13 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clearAllExpenses = async () => {
+    if (!user) return
+    
     try {
       const { error } = await supabase
         .from('expenses')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000')
+        .eq('user_id', user.id)
 
       if (error) {
         console.error('Error limpiando gastos:', error)
@@ -210,9 +235,10 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const addCategory = async (categoryData: Omit<Category, "id">) => {
+    if (!user) return
+    
     try {
-      // Generar un ID único basado en el label
-      const id = categoryData.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const id = categoryData.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + user.id.substring(0, 8)
       
       const { data, error } = await supabase
         .from('categories')
@@ -220,7 +246,8 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
           id: id,
           label: categoryData.label,
           emoji: categoryData.emoji,
-          color: categoryData.color
+          color: categoryData.color,
+          user_id: user.id
         })
         .select()
         .single()
@@ -241,8 +268,9 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteCategory = async (id: string) => {
+    if (!user) return
+    
     try {
-      // Verificar si hay gastos con esta categoría
       const expensesWithCategory = expenses.filter(e => e.category === id)
       if (expensesWithCategory.length > 0) {
         alert(`No puedes eliminar esta categoría porque tiene ${expensesWithCategory.length} gasto(s) asociado(s)`)
@@ -253,6 +281,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
         .from('categories')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id)
 
       if (error) {
         console.error('Error eliminando categoría:', error)
