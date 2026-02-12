@@ -89,7 +89,7 @@ export function ExpenseApp() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-background/80 px-4 py-4 backdrop-blur-md">
-        <img src="/logo.png" alt="Gastos Cash" className="h-10 w-auto" />
+        <img src="/icon-512.png" alt="Gastos Cash" className="h-10 w-auto" />
         <div className="flex items-center gap-1">
           <button 
             onClick={() => exportToCSV(expenses)} 
