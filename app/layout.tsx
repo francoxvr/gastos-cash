@@ -47,6 +47,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
+    <head>
+       <link rel="manifest" href="/manifest.json" />
+       <meta name="theme-color" content="#14b8a6" />
+       <meta name="mobile-web-app-capable" content="yes" />
+       <meta name="apple-mobile-web-app-capable" content="yes" />
+</head>
+
       <body
         className={`${geist.variable} ${geistMono.variable} font-sans antialiased transition-colors duration-300`}
         suppressHydrationWarning
