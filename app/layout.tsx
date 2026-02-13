@@ -30,11 +30,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-        <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
-        <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
-      </head>
+  <link rel="manifest" href="/manifest.json?v=12345" />
+  <link rel="icon" href="/icon-192.png?v=12345" type="image/png" sizes="192x192" />
+  <link rel="icon" href="/icon-512.png?v=12345" type="image/png" sizes="512x512" />
+  <link rel="apple-touch-icon" href="/icon-192.png?v=12345" sizes="192x192" />
+</head>
 
       <body
         className={`${geist.variable} ${geistMono.variable} font-sans antialiased transition-colors duration-300`}
