@@ -15,16 +15,6 @@ export const metadata: Metadata = {
   description: "Aplicación para control de gastos personales",
   themeColor: "#14b8a6",
 
-  icons: {
-    icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" }
-    ],
-    apple: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" }
-    ]
-  },
-
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -40,7 +30,10 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="/manifest.json?v=2" />
+        <link rel="icon" href="/icon-192.png?v=2" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/icon-512.png?v=2" type="image/png" sizes="512x512" />
+        <link rel="apple-touch-icon" href="/icon-192.png?v=2" sizes="192x192" />
       </head>
 
       <body
