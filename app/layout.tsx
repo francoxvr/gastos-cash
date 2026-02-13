@@ -13,7 +13,6 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 export const metadata: Metadata = {
   title: "Gastos Cash",
   description: "Aplicación para control de gastos personales",
-  manifest: "/manifest.json",
   themeColor: "#14b8a6",
 
   icons: {
@@ -40,6 +39,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
+  <head>
+    <link rel="manifest" href="/manifest.json" />
+  </head>
+
       <body
         className={`${geist.variable} ${geistMono.variable} font-sans antialiased transition-colors duration-300`}
         suppressHydrationWarning
