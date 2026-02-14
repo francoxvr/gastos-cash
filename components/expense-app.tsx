@@ -89,7 +89,7 @@ export function ExpenseApp() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-background/80 px-4 py-4 backdrop-blur-md">
-        <img src="/icon-512.png" alt="Gastos Cash" className="h-10 w-auto" />
+        <div></div>
         <div className="flex items-center gap-1">
           <button 
             onClick={() => exportToCSV(expenses)} 
@@ -114,7 +114,6 @@ export function ExpenseApp() {
           <button onClick={() => setCurrentScreen("calendar")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"><CalendarHeart className="h-5 w-5" /></button>
           <button onClick={() => setCurrentScreen("stats")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"><BarChart3 className="h-5 w-5" /></button>
           
-          {/* NUEVO: Botón de cerrar sesión */}
           <button 
             onClick={handleSignOut} 
             className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors"
