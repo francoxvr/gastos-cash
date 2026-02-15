@@ -19,7 +19,7 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <img src="/icon-512" alt="Gastos Cash" className="mx-auto h-24 w-auto mb-4 animate-pulse" />
+          <img src="/icon-512.png" alt="Gastos Cash" className="mx-auto h-24 w-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Cargando...</p>
         </div>
       </div>
