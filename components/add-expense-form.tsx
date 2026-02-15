@@ -6,10 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
 import type { Expense } from "@/lib/expenses"
-import { ArrowLeft, Check } from "lucide-react"
-
-const SELECTED_STYLE = "bg-primary text-primary-foreground border-primary shadow-md"
-const UNSELECTED_STYLE = "border-border bg-card text-muted-foreground hover:bg-primary/10 hover:border-primary/40 hover:text-foreground hover:shadow-md"
+import { ArrowLeft, Check, Calendar as CalendarIcon, Type } from "lucide-react"
 
 interface AddExpenseFormProps {
   onClose: () => void
@@ -40,13 +37,11 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
 
     setIsSubmitting(true)
 
-    // Si no hay descripción, usa el nombre de la categoría por defecto
-    const categoryName = categories.find(c => c.id === category)?.label || category
     const expenseData = {
       amount: Number.parseFloat(amount),
       category,
       date,
-      description: description.trim() || categoryName
+      description: description.trim() // Ahora permitimos que sea opcional sin forzar el nombre de la categoría aquí, ya que el ExpenseList lo maneja
     }
 
     if (isEditing && editingExpense) {
@@ -55,7 +50,6 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       await addExpense(expenseData)
     }
 
-    // Pequeño delay para feedback visual del botón "Guardado"
     setTimeout(() => {
       setIsSubmitting(false)
       onClose()
@@ -63,98 +57,117 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background animate-fade-in">
-      <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background animate-fade-in overflow-y-auto">
+      {/* Header Estilo App Nativa */}
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-background/80 px-4 py-6 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-90"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground transition-all active-press"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-xl font-semibold">
-          {isEditing ? "Editar gasto" : "Agregar gasto"}
+        <h1 className="text-lg font-black uppercase tracking-widest">
+          {isEditing ? "Editar" : "Nuevo Gasto"}
         </h1>
+        <div className="w-12" /> {/* Espaciador para centrar el título */}
       </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 px-4 pb-8">
-        {/* Input de Monto */}
-        <div className="flex flex-col gap-3">
-          <Label htmlFor="amount" className="text-base font-medium">Monto</Label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
-            <Input
-              id="amount"
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-8 px-6 pb-10">
+        
+        {/* Input de Monto Gigante */}
+        <div className="mt-4 flex flex-col items-center justify-center gap-2">
+          <div className="relative flex items-center justify-center">
+            <span className="absolute -left-8 text-4xl font-black opacity-20">$</span>
+            <input
               type="number"
               inputMode="decimal"
               placeholder="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
-              className="h-16 pl-8 text-3xl font-bold focus:shadow-lg active-press"
+              className="w-full bg-transparent text-center text-7xl font-black outline-none placeholder:opacity-10 tabular-nums"
               autoFocus
               required
             />
           </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Monto del gasto</p>
         </div>
 
-        {/* Selector de Categorías */}
-        <div className="flex flex-col gap-3">
-          <Label className="text-base font-medium">Categoría</Label>
+        {/* Selector de Categorías (Burbujas modernas) */}
+        <div className="flex flex-col gap-4">
+          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Seleccionar Categoría</Label>
           <div className="grid grid-cols-3 gap-3">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setCategory(cat.id)}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 px-2 py-4 text-center transition-all duration-300 active-press ${
-                  category === cat.id ? SELECTED_STYLE : UNSELECTED_STYLE
-                }`}
-              >
-                <span className="text-2xl">{cat.emoji}</span>
-                <span className="text-xs font-medium leading-tight">{cat.label}</span>
-                {category === cat.id && <Check className="h-3.5 w-3.5 mt-1" />}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const isSelected = category === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(cat.id)}
+                  className={`flex flex-col items-center gap-2 rounded-[2rem] border-2 py-5 transition-all duration-300 active-press ${
+                    isSelected 
+                    ? "border-primary bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-105" 
+                    : "border-border/40 bg-card text-muted-foreground opacity-60"
+                  }`}
+                >
+                  <span className="text-3xl">{cat.emoji}</span>
+                  <span className="text-[10px] font-black uppercase tracking-tight leading-tight">{cat.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Descripción */}
-        <div className="flex flex-col gap-3">
-          <Label htmlFor="description" className="text-base font-medium">Descripción (opcional)</Label>
-          <Input
-            id="description"
-            placeholder="Ej: Compra semanal"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="h-14 text-base focus:shadow-lg"
-          />
+        {/* Otros Detalles */}
+        <div className="space-y-4">
+           {/* Descripción */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50">
+              <Type className="h-5 w-5" />
+            </div>
+            <input
+              placeholder="¿En qué lo gastaste? (Opcional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="h-16 w-full rounded-3xl bg-muted/40 pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 focus:bg-muted/20"
+            />
+          </div>
+
+          {/* Fecha */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50">
+              <CalendarIcon className="h-5 w-5" />
+            </div>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-16 w-full rounded-3xl bg-muted/40 pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 focus:bg-muted/20"
+            />
+          </div>
         </div>
 
-        {/* Fecha */}
-        <div className="flex flex-col gap-3">
-          <Label htmlFor="date" className="text-base font-medium">Fecha</Label>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="h-14 text-base focus:shadow-lg"
-          />
-        </div>
-
+        {/* Botón de Guardar */}
         <div className="mt-auto pt-6">
-          <Button
+          <button
             type="submit"
-            size="lg"
             disabled={isInvalid || isSubmitting}
-            className="h-14 w-full text-lg font-semibold shadow-lg active-press"
+            className={`flex h-20 w-full items-center justify-center gap-3 rounded-[2.5rem] text-lg font-black uppercase tracking-[0.2em] transition-all active-press shadow-2xl ${
+              isSubmitting 
+              ? "bg-green-500 text-white" 
+              : "bg-primary text-primary-foreground shadow-primary/30"
+            } disabled:opacity-30 disabled:grayscale`}
           >
             {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <Check className="h-6 w-6" /> Guardado
-              </span>
-            ) : isEditing ? "Guardar cambios" : "Guardar gasto"}
-          </Button>
+              <>
+                <Check className="h-7 w-7 animate-bounce" /> ¡Guardado!
+              </>
+            ) : (
+              <>
+                {isEditing ? "Actualizar" : "Confirmar Gasto"}
+              </>
+            )}
+          </button>
         </div>
       </form>
     </div>

@@ -81,20 +81,27 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   {cat?.emoji || "❓"}
                 </div>
 
-                {/* Info */}
+                {/* Info Corregida: Categoría arriba, descripción abajo */}
                 <div className="flex flex-1 flex-col overflow-hidden">
                   <span className={`font-bold truncate ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
-                    {expense.description || cat?.label}
+                    {cat?.label || "Sin categoría"}
                   </span>
-                  <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider overflow-hidden
                     ${isExpanded ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                    <span>{formatDate(expense.date)}</span>
-                    {!expense.description && <span>• {cat?.label}</span>}
+                    <span className="shrink-0">{formatDate(expense.date)}</span>
+                    {expense.description && (
+                      <>
+                        <span className="shrink-0 opacity-50">•</span>
+                        <span className="truncate italic normal-case font-medium">
+                          {expense.description}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Importe */}
-                <div className="flex flex-col items-end gap-1">
+                {/* Importe Corregido: Separado del borde derecho con pr-4 */}
+                <div className="flex flex-col items-end gap-1 pr-4 shrink-0">
                   <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
                     {formatCurrency(expense.amount)}
                   </span>
