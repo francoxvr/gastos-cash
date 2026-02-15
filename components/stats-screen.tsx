@@ -31,7 +31,7 @@ interface StatsScreenProps {
 
 export function StatsScreen({ onClose }: StatsScreenProps) {
   const { expenses, categories, currentMonth, currentYear } = useExpenses()
-  const [period, setPeriod] = useState<TimePeriod>("mes")
+  const [period, setPeriod] = useState<TimePeriod>("dia")
 
   const stats = useMemo(() => {
     const now = new Date()

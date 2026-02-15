@@ -22,7 +22,7 @@ type TimeFilter = "dia" | "semana" | "mes" | "anio"
 export function ExpenseApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home")
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("mes") // Por defecto Mes suele ser más útil
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("dia") 
   
   const { expenses, clearAllExpenses, currentMonth, currentYear } = useExpenses()
   const { theme, toggleTheme } = useTheme()
