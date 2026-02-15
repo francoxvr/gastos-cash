@@ -25,7 +25,6 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
-  // Ordenar gastos: más recientes primero
   const sortedExpenses = [...expenses].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   )
@@ -81,7 +80,7 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   {cat?.emoji || "❓"}
                 </div>
 
-                {/* Info Corregida: Categoría arriba, descripción abajo */}
+                {/* Info */}
                 <div className="flex flex-1 flex-col overflow-hidden">
                   <span className={`font-bold truncate ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
                     {cat?.label || "Sin categoría"}
@@ -100,7 +99,7 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   </div>
                 </div>
 
-                {/* Importe Corregido: Separado del borde derecho con pr-4 */}
+                {/* Importe */}
                 <div className="flex flex-col items-end gap-1 pr-4 shrink-0">
                   <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
                     {formatCurrency(expense.amount)}
@@ -111,22 +110,28 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                 </div>
               </button>
 
-              {/* Acciones Expandibles */}
+              {/* Acciones Expandibles Corregidas */}
               {isExpanded && (
-                <div className="flex border-t border-white/10 animate-slide-down">
+                <div className="flex border-t border-black/5 animate-slide-down bg-black/5">
                   <button
                     onClick={() => { onEdit(expense); setExpandedId(null); }}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-bold uppercase tracking-widest text-primary-foreground hover:bg-white/10 active-press"
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-white/10 active-press"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                      <Pencil className="h-4 w-4 text-primary-foreground" />
+                    </div>
                     Editar
                   </button>
-                  <div className="w-[1px] bg-white/10 my-3" />
+                  
+                  <div className="w-[1px] bg-white/10 my-4" />
+                  
                   <button
                     onClick={() => setDeleteTarget(expense)}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-bold uppercase tracking-widest text-primary-foreground hover:bg-red-400 active-press"
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-red-500/20 active-press"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/30">
+                      <Trash2 className="h-4 w-4 text-red-100" />
+                    </div>
                     Eliminar
                   </button>
                 </div>
