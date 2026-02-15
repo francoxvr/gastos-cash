@@ -100,7 +100,7 @@ export function ExpenseApp() {
       <header className="sticky top-0 z-20 flex items-center justify-between bg-background/80 px-4 py-4 backdrop-blur-md border-b border-border/10">
         <div className="flex items-center gap-2">
           <img src="/icon-192.png" alt="Logo" className="h-8 w-8 rounded-lg" />
-          <span className="font-bold text-lg tracking-tight">Wallet</span>
+          <span className="font-bold text-lg tracking-tight">Gastos Cash</span>
         </div>
         
         <div className="flex items-center gap-1">
@@ -146,15 +146,15 @@ export function ExpenseApp() {
         <div className="grid grid-cols-3 gap-3">
           <button onClick={() => setCurrentScreen("stats")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
             <div className="p-3 bg-blue-500/10 text-blue-600 rounded-2xl"><BarChart3 className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Stats</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Estadísticas</span>
           </button>
           <button onClick={() => setCurrentScreen("calendar")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
             <div className="p-3 bg-purple-500/10 text-purple-600 rounded-2xl"><CalendarHeart className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Agenda</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Calendario</span>
           </button>
           <button onClick={() => setCurrentScreen("categories")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
             <div className="p-3 bg-orange-500/10 text-orange-600 rounded-2xl"><Tag className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tags</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categorías</span>
           </button>
         </div>
 
