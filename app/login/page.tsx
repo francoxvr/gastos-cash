@@ -70,7 +70,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/icon-app-192.png" alt="Gastos Cash" className="mx-auto h-20 w-20 mb-4" />
+          <img src="/icon-512.png" alt="Gastos Cash" className="mx-auto h-20 w-20 mb-4" />
 
           <h1 className="text-3xl font-bold">Bienvenido</h1>
           <p className="mt-2 text-muted-foreground">Inicia sesión en tu cuenta</p>
