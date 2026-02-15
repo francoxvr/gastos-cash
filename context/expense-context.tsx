@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/context/auth-context"
 
@@ -17,6 +17,7 @@ export interface Category {
   label: string
   emoji: string
   color: string
+  user_id?: string | null
 }
 
 interface ExpenseContextType {
@@ -34,6 +35,7 @@ interface ExpenseContextType {
   setCurrentMonth: (month: number) => void
   setCurrentYear: (year: number) => void
   loading: boolean
+  refreshData: () => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
@@ -46,277 +48,128 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
 
-  // Cargar gastos y categorías cuando el usuario cambia
+  const loadData = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      // Cargar Gastos y Categorías en paralelo para mayor velocidad
+      const [expensesRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false }),
+        supabase
+          .from('categories')
+          .select('*')
+          .or(`user_id.is.null,user_id.eq.${user.id}`)
+          .order('label', { ascending: true })
+      ])
+
+      if (expensesRes.data) setExpenses(expensesRes.data)
+      if (categoriesRes.data) setCategories(categoriesRes.data)
+    } catch (error) {
+      console.error('Error sincronizando con Supabase:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
   useEffect(() => {
     if (user) {
-      loadExpenses()
-      loadCategories()
+      loadData()
     } else {
       setExpenses([])
       setCategories([])
       setLoading(false)
     }
-  }, [user])
-
-  const loadExpenses = async () => {
-    if (!user) return
-    
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false })
-
-      if (error) {
-        console.error('Error cargando gastos:', error)
-        return
-      }
-
-      if (data) {
-        const mappedExpenses = data.map(expense => ({
-          id: expense.id,
-          amount: expense.amount,
-          category: expense.category,
-          date: expense.date,
-          description: expense.description || ''
-        }))
-        setExpenses(mappedExpenses)
-      }
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadCategories = async () => {
-    if (!user) return
-    
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .or(`user_id.is.null,user_id.eq.${user.id}`)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        console.error('Error cargando categorías:', error)
-        return
-      }
-
-      if (data) {
-        setCategories(data)
-      }
-    } catch (error) {
-      console.error('Error:', error)
-    }
-  }
+  }, [user, loadData])
 
   const getCategoryById = (id: string) => categories.find(cat => cat.id === id)
 
   const addExpense = async (expenseData: Omit<Expense, "id">) => {
     if (!user) return
+    // ID temporal para UI instantánea
+    const tempId = crypto.randomUUID()
+    const newExpense = { ...expenseData, id: tempId }
     
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .insert({
-          amount: expenseData.amount,
-          category: expenseData.category,
-          date: expenseData.date,
-          description: expenseData.description,
-          user_id: user.id
-        })
-        .select()
-        .single()
+    setExpenses(prev => [newExpense, ...prev])
 
-      if (error) {
-        console.error('Error agregando gasto:', error)
-        alert('Error al agregar el gasto: ' + error.message)
-        return
-      }
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert({ ...expenseData, user_id: user.id })
+      .select().single()
 
-      if (data) {
-        const newExpense: Expense = {
-          id: data.id,
-          amount: data.amount,
-          category: data.category,
-          date: data.date,
-          description: data.description || ''
-        }
-        setExpenses((prev) => [newExpense, ...prev])
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error al agregar el gasto')
+    if (error) {
+      setExpenses(prev => prev.filter(e => e.id !== tempId))
+      alert("No se pudo guardar: " + error.message)
+    } else if (data) {
+      setExpenses(prev => prev.map(e => e.id === tempId ? data : e))
     }
   }
 
   const updateExpense = async (id: string, expenseData: Omit<Expense, "id">) => {
-    if (!user) return
-    
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .update({
-          amount: expenseData.amount,
-          category: expenseData.category,
-          date: expenseData.date,
-          description: expenseData.description
-        })
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single()
+    const originalExpenses = [...expenses]
+    setExpenses(prev => prev.map(e => e.id === id ? { ...expenseData, id } : e))
 
-      if (error) {
-        console.error('Error actualizando gasto:', error)
-        alert('Error al actualizar el gasto: ' + error.message)
-        return
-      }
+    const { error } = await supabase
+      .from('expenses')
+      .update(expenseData)
+      .eq('id', id)
 
-      if (data) {
-        const updatedExpense: Expense = {
-          id: data.id,
-          amount: data.amount,
-          category: data.category,
-          date: data.date,
-          description: data.description || ''
-        }
-        setExpenses((prev) => prev.map(e => e.id === id ? updatedExpense : e))
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error al actualizar el gasto')
+    if (error) {
+      setExpenses(originalExpenses)
+      alert("Error al actualizar")
     }
   }
 
   const deleteExpense = async (id: string) => {
-    if (!user) return
-    
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
+    const originalExpenses = [...expenses]
+    setExpenses(prev => prev.filter(e => e.id !== id))
 
-      if (error) {
-        console.error('Error eliminando gasto:', error)
-        return
-      }
-
-      setExpenses((prev) => prev.filter((e) => e.id !== id))
-    } catch (error) {
-      console.error('Error:', error)
+    const { error } = await supabase.from('expenses').delete().eq('id', id)
+    if (error) {
+      setExpenses(originalExpenses)
+      alert("No se pudo eliminar")
     }
   }
 
-  const clearAllExpenses = async () => {
+  const addCategory = async (catData: Omit<Category, "id">) => {
     if (!user) return
-    
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('user_id', user.id)
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ ...catData, user_id: user.id })
+      .select().single()
 
-      if (error) {
-        console.error('Error limpiando gastos:', error)
-        return
-      }
-
-      setExpenses([])
-    } catch (error) {
-      console.error('Error:', error)
-    }
-  }
-
-  const addCategory = async (categoryData: Omit<Category, "id">) => {
-    if (!user) return
-    
-    try {
-      const id = categoryData.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + user.id.substring(0, 8)
-      
-      const { data, error } = await supabase
-        .from('categories')
-        .insert({
-          id: id,
-          label: categoryData.label,
-          emoji: categoryData.emoji,
-          color: categoryData.color,
-          user_id: user.id
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error agregando categoría:', error)
-        alert('Error al agregar la categoría: ' + error.message)
-        return
-      }
-
-      if (data) {
-        setCategories((prev) => [...prev, data])
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error al agregar la categoría')
-    }
+    if (data) setCategories(prev => [...prev, data])
+    if (error) alert("Error al crear categoría")
   }
 
   const deleteCategory = async (id: string) => {
-    if (!user) return
-    
-    try {
-      const expensesWithCategory = expenses.filter(e => e.category === id)
-      if (expensesWithCategory.length > 0) {
-        alert(`No puedes eliminar esta categoría porque tiene ${expensesWithCategory.length} gasto(s) asociado(s)`)
-        return
-      }
-
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Error eliminando categoría:', error)
-        return
-      }
-
-      setCategories((prev) => prev.filter((c) => c.id !== id))
-    } catch (error) {
-      console.error('Error:', error)
+    const hasExpenses = expenses.some(e => e.category === id)
+    if (hasExpenses) {
+      alert("Esta categoría tiene gastos asociados y no puede borrarse.")
+      return
     }
+
+    setCategories(prev => prev.filter(c => c.id !== id))
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) loadData() // Re-sincronizar si falla
   }
 
   return (
     <ExpenseContext.Provider value={{ 
-      expenses, 
-      categories,
-      addExpense,
-      updateExpense,
-      deleteExpense, 
-      clearAllExpenses,
-      addCategory,
-      deleteCategory,
-      getCategoryById, 
-      currentMonth, 
-      currentYear, 
-      setCurrentMonth, 
-      setCurrentYear,
-      loading
+      expenses, categories, addExpense, updateExpense, deleteExpense, 
+      addCategory, deleteCategory, getCategoryById, 
+      currentMonth, currentYear, setCurrentMonth, setCurrentYear,
+      loading, refreshData: loadData, clearAllExpenses: async () => {} 
     }}>
       {children}
     </ExpenseContext.Provider>
   )
 }
 
-export function useExpenses() {
+export const useExpenses = () => {
   const context = useContext(ExpenseContext)
   if (!context) throw new Error("useExpenses must be used within ExpenseProvider")
   return context

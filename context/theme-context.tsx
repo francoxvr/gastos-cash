@@ -18,31 +18,42 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // Inicializamos con un valor seguro para el servidor
   const [theme, setTheme] = useState<Theme>("light")
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    const stored = window.localStorage.getItem("theme") as Theme | null
-    if (stored) {
-      setTheme(stored)
-      document.documentElement.classList.toggle("dark", stored === "dark")
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark")
-      document.documentElement.classList.add("dark")
-    }
+    const stored = window.localStorage.getItem("theme-app") as Theme | null
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+
+    const initialTheme = stored || (prefersDark ? "dark" : "light")
+    
+    setTheme(initialTheme)
+    document.documentElement.classList.toggle("dark", initialTheme === "dark")
   }, [])
 
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light"
     setTheme(next)
-    document.documentElement.classList.toggle("dark", next === "dark")
-    window.localStorage.setItem("theme", next)
+    
+    // Aplicamos el cambio al HTML para que Tailwind lo detecte
+    if (next === "dark") {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+    
+    window.localStorage.setItem("theme-app", next)
   }
 
+  // Evitamos renderizar contenido que dependa del tema hasta que el cliente esté listo
+  // Esto previene errores de "Hydration Mismatch"
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+      <div style={{ visibility: mounted ? "visible" : "hidden" }}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   )
 }

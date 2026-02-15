@@ -20,12 +20,10 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const { addExpense, updateExpense, categories } = useExpenses()
   const isEditing = !!editingExpense
 
+  // Obtiene la fecha actual en formato YYYY-MM-DD local
   const getLocalDate = () => {
     const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, "0")
-    const day = String(now.getDate()).padStart(2, "0")
-    return `${year}-${month}-${day}`
+    return now.toISOString().split('T')[0]
   }
 
   const [amount, setAmount] = useState(isEditing ? editingExpense.amount.toString() : "")
@@ -34,50 +32,52 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const [description, setDescription] = useState(isEditing ? editingExpense.description : "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isInvalid = !amount || Number.parseFloat(amount) <= 0;
+  const isInvalid = !amount || Number.parseFloat(amount) <= 0
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (isInvalid) return
+    e.preventDefault()
+    if (isInvalid) return
 
-  setIsSubmitting(true)
+    setIsSubmitting(true)
 
-  const categoryName = categories.find(c => c.id === category)?.label || category
+    // Si no hay descripción, usa el nombre de la categoría por defecto
+    const categoryName = categories.find(c => c.id === category)?.label || category
+    const expenseData = {
+      amount: Number.parseFloat(amount),
+      category,
+      date,
+      description: description.trim() || categoryName
+    }
 
-  const expenseData = {
-    amount: Number.parseFloat(amount),
-    category,
-    date,
-    description: description.trim() || categoryName
+    if (isEditing && editingExpense) {
+      await updateExpense(editingExpense.id, expenseData)
+    } else {
+      await addExpense(expenseData)
+    }
+
+    // Pequeño delay para feedback visual del botón "Guardado"
+    setTimeout(() => {
+      setIsSubmitting(false)
+      onClose()
+    }, 600)
   }
-
-  if (isEditing && editingExpense) {
-    await updateExpense(editingExpense.id, expenseData)
-  } else {
-    await addExpense(expenseData)
-  }
-
-  setTimeout(() => {
-    setIsSubmitting(false)
-    onClose()
-  }, 600)
-}
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background animate-fade-in">
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all duration-200 hover:bg-muted active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-90"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-xl font-semibold text-foreground">
+        <h1 className="text-xl font-semibold">
           {isEditing ? "Editar gasto" : "Agregar gasto"}
         </h1>
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 px-4 pb-8">
+        {/* Input de Monto */}
         <div className="flex flex-col gap-3">
           <Label htmlFor="amount" className="text-base font-medium">Monto</Label>
           <div className="relative">
@@ -90,14 +90,14 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
-              className="h-16 pl-8 text-3xl font-bold focus:shadow-lg"
+              className="h-16 pl-8 text-3xl font-bold focus:shadow-lg active-press"
               autoFocus
-              min="0"
-              step="0.01"
+              required
             />
           </div>
         </div>
 
+        {/* Selector de Categorías */}
         <div className="flex flex-col gap-3">
           <Label className="text-base font-medium">Categoría</Label>
           <div className="grid grid-cols-3 gap-3">
@@ -106,23 +106,23 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id)}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 px-2 py-4 text-center transition-all duration-300 active:scale-95 ${
+                className={`flex flex-col items-center gap-2 rounded-xl border-2 px-2 py-4 text-center transition-all duration-300 active-press ${
                   category === cat.id ? SELECTED_STYLE : UNSELECTED_STYLE
                 }`}
               >
                 <span className="text-2xl">{cat.emoji}</span>
                 <span className="text-xs font-medium leading-tight">{cat.label}</span>
-                {category === cat.id && <Check className="h-3.5 w-3.5" />}
+                {category === cat.id && <Check className="h-3.5 w-3.5 mt-1" />}
               </button>
             ))}
           </div>
         </div>
 
+        {/* Descripción */}
         <div className="flex flex-col gap-3">
           <Label htmlFor="description" className="text-base font-medium">Descripción (opcional)</Label>
           <Input
             id="description"
-            type="text"
             placeholder="Ej: Compra semanal"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -130,6 +130,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
           />
         </div>
 
+        {/* Fecha */}
         <div className="flex flex-col gap-3">
           <Label htmlFor="date" className="text-base font-medium">Fecha</Label>
           <Input
@@ -146,22 +147,13 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             type="submit"
             size="lg"
             disabled={isInvalid || isSubmitting}
-            className={`h-14 w-full text-lg font-semibold shadow-lg transition-all duration-200 active:scale-[0.97] ${
-              isInvalid 
-                ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70" 
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
+            className="h-14 w-full text-lg font-semibold shadow-lg active-press"
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
-                <Check className="h-6 w-6" />
-                Guardado
+                <Check className="h-6 w-6" /> Guardado
               </span>
-            ) : isEditing ? (
-              "Guardar cambios"
-            ) : (
-              "Guardar gasto"
-            )}
+            ) : isEditing ? "Guardar cambios" : "Guardar gasto"}
           </Button>
         </div>
       </form>

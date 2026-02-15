@@ -16,8 +16,8 @@ export function ExpenseCalendar() {
   const { expenses, getCategoryById } = useExpenses()
   const today = new Date()
 
-  // --- CORRECCIÓN DE HOY (ZONA HORARIA LOCAL) ---
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+  // Hoy en formato YYYY-MM-DD local
+  const todayStr = today.toLocaleDateString('en-CA'); // Formato ISO local YYYY-MM-DD
 
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [viewYear, setViewYear] = useState(today.getFullYear())
@@ -25,49 +25,29 @@ export function ExpenseCalendar() {
 
   const expensesByDate = useMemo(() => {
     const map = new Map<string, Expense[]>()
-    for (const expense of expenses) {
-      // Usamos el formato local para la comparación
-      const [year, month, day] = expense.date.split("-").map(Number)
+    expenses.forEach(expense => {
+      const [year, month] = expense.date.split("-").map(Number)
       if (month - 1 === viewMonth && year === viewYear) {
-        const key = expense.date
-        if (!map.has(key)) map.set(key, [])
-        map.get(key)!.push(expense)
+        const list = map.get(expense.date) || []
+        list.push(expense)
+        map.set(expense.date, list)
       }
-    }
+    })
     return map
   }, [expenses, viewMonth, viewYear])
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(viewYear, viewMonth, 1).getDay()
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-    const days: (number | null)[] = []
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null)
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push(d)
-    }
+    const days: (number | null)[] = Array(firstDay).fill(null)
+    for (let d = 1; d <= daysInMonth; d++) days.push(d)
     return days
   }, [viewMonth, viewYear])
 
-  const prevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11)
-      setViewYear(viewYear - 1)
-    } else {
-      setViewMonth(viewMonth - 1)
-    }
-    setSelectedDate(null)
-  }
-
-  const nextMonth = () => {
-    if (viewMonth === 11) {
-      setViewMonth(0)
-      setViewYear(viewYear + 1)
-    } else {
-      setViewMonth(viewMonth + 1)
-    }
+  const navigateMonth = (direction: number) => {
+    const newDate = new Date(viewYear, viewMonth + direction, 1)
+    setViewMonth(newDate.getMonth())
+    setViewYear(newDate.getFullYear())
     setSelectedDate(null)
   }
 
@@ -81,88 +61,66 @@ export function ExpenseCalendar() {
   const selectedTotal = selectedExpenses.reduce((sum, e) => sum + e.amount, 0)
 
   const monthTotal = useMemo(() => {
-    let total = 0
-    for (const exps of expensesByDate.values()) {
-      for (const e of exps) {
-        total += e.amount
-      }
-    }
-    return total
+    return Array.from(expensesByDate.values())
+      .flat()
+      .reduce((sum, e) => sum + e.amount, 0)
   }, [expensesByDate])
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Month navigation */}
-      <div className="animate-slide-up flex items-center justify-between rounded-2xl bg-card p-4 shadow-sm">
-        <button
-          onClick={prevMonth}
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:bg-muted active:scale-90"
-        >
-          <ChevronLeft className="h-5 w-5 text-foreground" />
+    <div className="flex flex-col gap-5 animate-fade-in">
+      {/* Navegación de Mes */}
+      <div className="flex items-center justify-between rounded-3xl bg-card p-4 shadow-sm border border-border/40">
+        <button onClick={() => navigateMonth(-1)} className="p-2 rounded-full hover:bg-muted active-press">
+          <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-lg font-semibold text-foreground">
-            {monthNames[viewMonth]} {viewYear}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Total: {formatCurrency(monthTotal)}
-          </p>
+        <div className="text-center">
+          <h2 className="text-lg font-bold capitalize">{monthNames[viewMonth]} {viewYear}</h2>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{formatCurrency(monthTotal)}</p>
         </div>
-        <button
-          onClick={nextMonth}
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:bg-muted active:scale-90"
-        >
-          <ChevronRight className="h-5 w-5 text-foreground" />
+        <button onClick={() => navigateMonth(1)} className="p-2 rounded-full hover:bg-muted active-press">
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Calendar grid */}
-      <div className="animate-scale-in rounded-2xl bg-card p-4 shadow-sm">
-        <div className="mb-2 grid grid-cols-7 gap-1">
+      {/* Grid del Calendario */}
+      <div className="rounded-[2rem] bg-card p-5 shadow-sm border border-border/40">
+        <div className="mb-4 grid grid-cols-7 text-center">
           {dayNames.map((day) => (
-            <div key={day} className="py-2 text-center text-xs font-medium text-muted-foreground">
-              {day}
-            </div>
+            <span key={day} className="text-[10px] font-bold uppercase text-muted-foreground/60">{day}</span>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {calendarDays.map((day, index) => {
-            if (day === null) return <div key={`empty-${index}`} className="aspect-square" />
+            if (day === null) return <div key={`empty-${index}`} />
 
             const dateStr = getDateStr(day)
-            const hasExpenses = expensesByDate.has(dateStr)
+            const dayExpenses = expensesByDate.get(dateStr) || []
+            const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0)
             const isToday = dateStr === todayStr
             const isSelected = dateStr === selectedDate
-            const dayTotal = hasExpenses
-              ? expensesByDate.get(dateStr)!.reduce((sum, e) => sum + e.amount, 0)
-              : 0
 
-            let intensityClass = ""
-            if (hasExpenses) {
-              if (dayTotal > 3000) intensityClass = "bg-primary text-primary-foreground"
-              else if (dayTotal > 1500) intensityClass = "bg-primary/70 text-primary-foreground"
-              else intensityClass = "bg-primary/30 text-foreground"
+            // Clases de intensidad basadas en el gasto
+            let intensity = "hover:bg-muted text-foreground"
+            if (dayExpenses.length > 0) {
+              if (dayTotal > 5000) intensity = "bg-primary text-primary-foreground"
+              else if (dayTotal > 2000) intensity = "bg-primary/60 text-primary-foreground"
+              else intensity = "bg-primary/20 text-primary font-bold"
             }
 
             return (
               <button
                 key={dateStr}
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 active:scale-90
-                  ${isSelected
-                    ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
-                    : hasExpenses
-                      ? intensityClass
-                      : isToday
-                        ? "bg-muted font-bold ring-2 ring-primary/20 text-foreground" // Resaltamos HOY correctamente
-                        : "text-foreground hover:bg-muted"
-                  }
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl text-sm transition-all active-press
+                  ${isSelected ? "ring-2 ring-primary ring-offset-4 ring-offset-background z-10 scale-110 shadow-lg" : ""}
+                  ${isToday && !dayExpenses.length ? "border-2 border-primary/30 font-black" : ""}
+                  ${intensity}
                 `}
               >
-                <span>{day}</span>
-                {hasExpenses && !isSelected && (
-                  <span className="absolute bottom-1 h-1 w-1 rounded-full bg-current opacity-70" />
+                <span className={isSelected ? "font-bold" : ""}>{day}</span>
+                {dayExpenses.length > 0 && !isSelected && (
+                  <span className="absolute bottom-2 h-1 w-1 rounded-full bg-current opacity-50" />
                 )}
               </button>
             )
@@ -170,47 +128,41 @@ export function ExpenseCalendar() {
         </div>
       </div>
 
-      {/* Selected day detail */}
+      {/* Detalle del día seleccionado */}
       {selectedDate && (
-        <div className="animate-slide-up flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-foreground">
+        <div className="flex flex-col gap-3 animate-entrance">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
               {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-AR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
+                weekday: "short", day: "numeric", month: "short"
               })}
             </h3>
-            <span className="text-sm font-semibold text-primary">
-              {formatCurrency(selectedTotal)}
-            </span>
+            <span className="text-lg font-bold text-primary">{formatCurrency(selectedTotal)}</span>
           </div>
 
-          {selectedExpenses.length > 0 ? (
-            selectedExpenses.map((expense, i) => {
-              const cat = getCategoryById(expense.category)
-              return (
-                <div
-                  key={expense.id}
-                  className="animate-slide-up flex items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
-                >
-                  <span className="text-xl">{cat?.emoji || "❓"}</span>
-                  <div className="flex flex-1 flex-col">
-                    <span className="text-sm font-medium text-foreground">
-                      {expense.description || cat?.label}
-                    </span>
+          <div className="space-y-2">
+            {selectedExpenses.length > 0 ? (
+              selectedExpenses.map((expense) => {
+                const cat = getCategoryById(expense.category)
+                return (
+                  <div key={expense.id} className="flex items-center gap-4 rounded-2xl bg-card p-4 border border-border/40 shadow-sm">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-xl">
+                      {cat?.emoji || "💸"}
+                    </div>
+                    <div className="flex flex-1 flex-col">
+                      <span className="text-sm font-semibold">{expense.description || cat?.label}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{cat?.label}</span>
+                    </div>
+                    <span className="font-bold">{formatCurrency(expense.amount)}</span>
                   </div>
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {formatCurrency(expense.amount)}
-                  </span>
-                </div>
-              )
-            })
-          ) : (
-            <div className="flex items-center justify-center rounded-xl bg-card py-6 text-sm text-muted-foreground shadow-sm">
-              Sin gastos este día
-            </div>
-          )}
+                )
+              })
+            ) : (
+              <div className="rounded-2xl border-2 border-dashed border-border/40 py-8 text-center text-sm text-muted-foreground">
+                No hay gastos registrados
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

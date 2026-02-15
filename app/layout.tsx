@@ -1,5 +1,5 @@
 import React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { AuthProvider } from "@/context/auth-context"
 import { ExpenseProvider } from "@/context/expense-context"
@@ -10,11 +10,18 @@ import "./globals.css"
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
+// Configuración de la apariencia del navegador
+export const viewport: Viewport = {
+  themeColor: "#14b8a6",
+  width: "device-width",
+  initialScale: 1,
+}
+
+// Metadatos principales y configuración para dispositivos Apple
 export const metadata: Metadata = {
   title: "Gastos Cash",
   description: "Aplicación para control de gastos personales",
-  themeColor: "#14b8a6",
-
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -30,10 +37,10 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-  <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
-</head>
+        {/* Favicons y acceso directo para móviles */}
+        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
+      </head>
 
       <body
         className={`${geist.variable} ${geistMono.variable} font-sans antialiased transition-colors duration-300`}

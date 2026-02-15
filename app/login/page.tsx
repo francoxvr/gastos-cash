@@ -14,13 +14,15 @@ import Link from "next/link"
 export default function LoginPage() {
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
+  const { signIn } = useAuth()
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const { signIn } = useAuth()
 
+  // Autenticación con Email y Contraseña
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -30,16 +32,17 @@ export default function LoginPage() {
       await signIn(email, password)
       router.push("/")
     } catch (err: any) {
-      if (err.message.includes("Invalid login credentials")) {
-        setError("Email o contraseña incorrectos")
-      } else {
-        setError(err.message || "Ocurrió un error. Intenta nuevamente.")
-      }
+      setError(
+        err.message.includes("Invalid login credentials") 
+          ? "Email o contraseña incorrectos" 
+          : "Error al iniciar sesión. Intenta nuevamente."
+      )
     } finally {
       setLoading(false)
     }
   }
 
+  // Autenticación con Google (OAuth)
   const handleGoogleSignIn = async () => {
     setError("")
     setLoading(true)
@@ -53,37 +56,36 @@ export default function LoginPage() {
       })
       if (error) throw error
     } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión con Google")
+      setError("Error al conectar con Google")
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
-      {/* Botón de tema en la esquina superior derecha */}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8 animate-fade-in">
+      
+      {/* Selector de modo oscuro/claro */}
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors z-50"
+        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors z-50 active-press"
       >
         {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
       </button>
 
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/icon-512.png" alt="Gastos Cash" className="mx-auto h-20 w-20 mb-4" />
-
-          <h1 className="text-3xl font-bold">Bienvenido</h1>
+          <img src="/icon-512.png" alt="Logo" className="mx-auto h-20 w-20 mb-4 animate-entrance" />
+          <h1 className="text-3xl font-bold tracking-tight">Bienvenido</h1>
           <p className="mt-2 text-muted-foreground">Inicia sesión en tu cuenta</p>
         </div>
 
+        {/* Botón de Google */}
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-lg border-2 border-border bg-background px-4 py-3 font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 rounded-lg border-2 border-border bg-background px-4 py-3 font-medium transition-colors hover:bg-muted disabled:opacity-50 active-press"
         >
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -95,26 +97,16 @@ export default function LoginPage() {
         </button>
 
         <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-background px-2 text-muted-foreground">O continúa con email</span>
+            <span className="bg-background px-2 text-muted-foreground">O con tu email</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-              disabled={loading}
-            />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required disabled={loading} />
           </div>
 
           <div className="space-y-2">
@@ -125,7 +117,6 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
                 required
                 disabled={loading}
                 className="pr-10"
@@ -133,7 +124,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
@@ -141,28 +132,18 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive animate-fade-in">
               {error}
             </div>
           )}
 
-          <Button type="submit" className="w-full h-11" disabled={loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Iniciando sesión...
-              </span>
-            ) : (
-              "Iniciar sesión"
-            )}
+          <Button type="submit" className="w-full h-11 active-press" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Iniciar sesión"}
           </Button>
 
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">¿No tienes cuenta? </span>
-            <Link href="/register" className="text-primary font-medium hover:underline">
-              Regístrate
-            </Link>
-          </div>
+          <p className="text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta? <Link href="/register" className="text-primary font-medium hover:underline">Regístrate</Link>
+          </p>
         </form>
       </div>
     </div>

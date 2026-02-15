@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { useExpenses } from "@/context/expense-context"
 import { formatCurrency, formatDate } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, ChevronDown } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,27 +25,31 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
+  // Ordenar gastos: más recientes primero
+  const sortedExpenses = [...expenses].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
+
   const handleToggleActions = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteTarget) {
-      deleteExpense(deleteTarget.id)
+      await deleteExpense(deleteTarget.id)
       setDeleteTarget(null)
       setExpandedId(null)
     }
   }
 
-  const handleEdit = (expense: Expense) => {
-    setExpandedId(null)
-    onEdit(expense)
-  }
-
   if (expenses.length === 0) {
     return (
-      <div className="animate-fade-in flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <p>No hay gastos registrados</p>
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
+          ☕
+        </div>
+        <p className="text-muted-foreground font-medium">No hay gastos registrados aún</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Toca el botón "+" para empezar</p>
       </div>
     )
   }
@@ -53,75 +57,67 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
   return (
     <>
       <div className="flex flex-col gap-3">
-        {expenses.slice(0, 20).map((expense, index) => {
+        {sortedExpenses.slice(0, 30).map((expense, index) => {
           const cat = getCategoryById(expense.category)
-          const emoji = cat?.emoji || "\u{2753}"
-          const label = cat?.label || expense.category
-          const color = cat?.color || "hsl(220, 15%, 50%)"
-
+          const isExpanded = expandedId === expense.id
+          
           return (
             <div
               key={expense.id}
-              className={`animate-slide-up overflow-hidden rounded-xl shadow-sm transition-all duration-300 stagger-${Math.min(index + 1, 10)} ${
-                expandedId === expense.id
-                  ? "bg-primary text-primary-foreground shadow-md scale-[1.02]"
-                  : "bg-card hover:shadow-md"
-              }`}
+              className={`group relative overflow-hidden rounded-[2rem] transition-all duration-300 animate-entrance
+                ${isExpanded ? "bg-primary shadow-xl shadow-primary/20" : "bg-card border border-border/40"}`}
+              style={{ animationDelay: `${index * 0.05}s` }}
             >
-              <div className="flex items-center">
-                <button
-                  onClick={() => handleToggleActions(expense.id)}
-                  className="flex flex-1 items-center gap-4 p-4 text-left transition-colors active:opacity-80"
-                  aria-label={`${label}, ${formatCurrency(expense.amount)}`}
+              <button
+                onClick={() => handleToggleActions(expense.id)}
+                className="flex w-full items-center gap-4 p-4 text-left active-press"
+              >
+                {/* Icono / Emoji */}
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition-colors
+                    ${isExpanded ? "bg-white/20" : "bg-muted"}`}
+                  style={!isExpanded && cat?.color ? { backgroundColor: `${cat.color}15`, color: cat.color } : undefined}
                 >
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl transition-all duration-200 active:scale-90 ${
-                      expandedId === expense.id
-                        ? "bg-primary-foreground/20"
-                        : ""
-                    }`}
-                    style={
-                      expandedId === expense.id
-                        ? undefined
-                        : { backgroundColor: `${color}20` }
-                    }
-                  >
-                    {emoji}
+                  {cat?.emoji || "❓"}
+                </div>
+
+                {/* Info */}
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <span className={`font-bold truncate ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
+                    {expense.description || cat?.label}
+                  </span>
+                  <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider
+                    ${isExpanded ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <span>{formatDate(expense.date)}</span>
+                    {!expense.description && <span>• {cat?.label}</span>}
                   </div>
-                  <div className="flex flex-1 flex-col gap-0.5">
-                    <span className={`font-medium ${expandedId === expense.id ? "text-primary-foreground" : "text-foreground"}`}>
-                      {label}
-                    </span>
-                    {expense.description && (
-                      <span className={`text-xs ${expandedId === expense.id ? "text-primary-foreground/70" : "text-muted-foreground/80"}`}>
-                        {expense.description}
-                      </span>
-                    )}
-                    <span className={`text-sm ${expandedId === expense.id ? "text-primary-foreground/75" : "text-muted-foreground"}`}>
-                      {formatDate(expense.date)}
-                    </span>
-                  </div>
-                  <span className={`text-lg font-semibold tabular-nums ${expandedId === expense.id ? "text-primary-foreground" : "text-foreground"}`}>
+                </div>
+
+                {/* Importe */}
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
                     {formatCurrency(expense.amount)}
                   </span>
-                </button>
-              </div>
+                  <ChevronDown className={`h-3 w-3 transition-transform duration-300 
+                    ${isExpanded ? "rotate-180 text-primary-foreground" : "text-muted-foreground/30"}`} 
+                  />
+                </div>
+              </button>
 
-              {expandedId === expense.id && (
-                <div className="animate-expand-height flex overflow-hidden rounded-b-xl">
+              {/* Acciones Expandibles */}
+              {isExpanded && (
+                <div className="flex border-t border-white/10 animate-slide-down">
                   <button
-                    onClick={() => handleEdit(expense)}
-                    className="flex flex-1 items-center justify-center gap-2 bg-card py-3 text-sm font-medium text-foreground transition-all duration-200 hover:bg-muted active:scale-95"
-                    aria-label="Editar gasto"
+                    onClick={() => { onEdit(expense); setExpandedId(null); }}
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-bold uppercase tracking-widest text-primary-foreground hover:bg-white/10 active-press"
                   >
                     <Pencil className="h-4 w-4" />
                     Editar
                   </button>
-                  <div className="w-px bg-border" />
+                  <div className="w-[1px] bg-white/10 my-3" />
                   <button
                     onClick={() => setDeleteTarget(expense)}
-                    className="flex flex-1 items-center justify-center gap-2 bg-card py-3 text-sm font-medium text-destructive transition-all duration-200 hover:bg-muted active:scale-95"
-                    aria-label="Eliminar gasto"
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-bold uppercase tracking-widest text-primary-foreground hover:bg-red-400 active-press"
                   >
                     <Trash2 className="h-4 w-4" />
                     Eliminar
@@ -133,25 +129,18 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
         })}
       </div>
 
+      {/* Confirmación de Borrado */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <AlertDialogContent className="animate-scale-in mx-4 max-w-sm">
+        <AlertDialogContent className="rounded-3xl w-[90%]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar gasto</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a eliminar el gasto de{" "}
-              <span className="font-semibold">
-                {deleteTarget ? formatCurrency(deleteTarget.amount) : ""}
-              </span>{" "}
-              en {deleteTarget ? (getCategoryById(deleteTarget.category)?.label || deleteTarget.category) : ""}.
-              Esta accion no se puede deshacer.
+            <AlertDialogTitle>¿Eliminar este gasto?</AlertDialogTitle>
+            <AlertDialogDescription className="text-balance">
+              Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+          <AlertDialogFooter className="flex-row gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 rounded-2xl mt-0">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-2xl">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -160,5 +149,3 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
     </>
   )
 }
-
-
