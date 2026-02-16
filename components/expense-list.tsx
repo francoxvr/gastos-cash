@@ -111,31 +111,31 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                 </div>
               </button>
 
-              {/* Acciones Expandibles con Énfasis Dark/Light */}
+              {/* Acciones Expandibles - FONDO GRIS CON ÉNFASIS */}
               {isExpanded && (
-                <div className="flex border-t border-black/5 dark:border-white/5 animate-slide-down bg-black/5 dark:bg-white/5">
-                  {/* Botón Editar */}
+                <div className="flex border-t border-white/10 animate-slide-down">
+                  {/* Botón Editar - GRIS CON CÍRCULO CELESTE-VERDE */}
                   <button
                     onClick={() => { onEdit(expense); setExpandedId(null); }}
                     className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press 
-                      text-primary-foreground hover:bg-white/20 dark:hover:bg-black/20"
+                      bg-gray-500/30 hover:bg-gray-500/40 text-white"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full shadow-inner bg-white/30 dark:bg-black/20">
-                      <Pencil className="h-4 w-4" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary shadow-lg">
+                      <Pencil className="h-4 w-4 text-white" />
                     </div>
                     Editar
                   </button>
                   
-                  {/* Divisor Adaptativo */}
-                  <div className="w-[1px] bg-black/10 dark:bg-white/10 my-4" />
+                  {/* Divisor */}
+                  <div className="w-[1px] bg-white/10 my-4" />
                   
-                  {/* Botón Eliminar */}
+                  {/* Botón Eliminar - GRIS CON CÍRCULO CELESTE-VERDE */}
                   <button
                     onClick={() => setDeleteTarget(expense)}
                     className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
-                      text-red-50 dark:text-red-100 hover:bg-red-500/30"
+                      bg-gray-500/30 hover:bg-gray-500/40 text-white"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full shadow-lg bg-red-600/40 dark:bg-red-900/40">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary shadow-lg">
                       <Trash2 className="h-4 w-4 text-white" />
                     </div>
                     Eliminar
