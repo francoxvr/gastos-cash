@@ -35,9 +35,11 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
   const stats = useMemo(() => {
     const now = new Date()
+    // Normalizar fechas para comparación (00:00:00)
     const todayTarget = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).getTime()
 
+    // 1. Filtrar gastos del periodo actual
     const filtered = expenses.filter((expense) => {
       const [year, month, day] = expense.date.split('-').map(Number)
       const expenseTime = new Date(year, month - 1, day).getTime()
@@ -50,6 +52,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
     const total = filtered.reduce((sum, e) => sum + e.amount, 0)
 
+    // 2. Agrupar por categoría
     const byCategory = categories.map((cat) => {
       const categoryTotal = filtered
         .filter((e) => e.category === cat.id)
@@ -64,6 +67,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
       }
     }).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount)
 
+    // 3. Calcular periodo anterior para el % de cambio
     const prevFiltered = expenses.filter((expense) => {
       const [year, month, day] = expense.date.split('-').map(Number)
       const expenseTime = new Date(year, month - 1, day).getTime()
@@ -99,17 +103,17 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
   const prevPeriodLabel = { dia: "ayer", semana: "seman. ant.", mes: "mes ant.", anio: "año ant." }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in slide-in-from-bottom-10 duration-500 overflow-y-auto pb-10">
-      <header className="sticky top-0 z-20 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md border-b border-white/5">
-        <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-muted/50 active-press">
-          <ArrowLeft className="h-5 w-5" />
+    <div className="flex min-h-screen flex-col bg-background animate-entrance">
+      <header className="sticky top-0 z-20 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md border-b border-border/10">
+        <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted active-press">
+          <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-lg font-black uppercase tracking-widest">Estadísticas</h1>
+        <h1 className="text-xl font-bold">Estadísticas</h1>
       </header>
 
-      <main className="flex flex-1 flex-col gap-6 px-4 py-6">
+      <main className="flex flex-1 flex-col gap-6 px-4 py-6 pb-20">
         {/* Selector de periodo estilizado */}
-        <div className="flex gap-1 rounded-[1.5rem] bg-muted/30 p-1 border border-white/5">
+        <div className="flex gap-1.5 rounded-2xl bg-muted/50 p-1.5 border border-border/50">
           {[
             { key: "dia", label: "Día", icon: CalendarDays },
             { key: "semana", label: "Sem.", icon: CalendarClock },
@@ -119,10 +123,8 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
             <button
               key={tab.key}
               onClick={() => setPeriod(tab.key as TimePeriod)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10px] font-black uppercase tracking-tight transition-all active-press ${
-                period === tab.key 
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                  : "text-muted-foreground hover:bg-white/5"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-tight transition-all active-press ${
+                period === tab.key ? "bg-background text-primary shadow-sm border border-border/10" : "text-muted-foreground opacity-70"
               }`}
             >
               <tab.icon className="h-3.5 w-3.5" />
@@ -133,87 +135,78 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
         {/* Resumen numérico */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-[2rem] bg-card p-6 border border-white/5 shadow-xl shadow-black/5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Gastado {periodLabel[period]}</span>
-            <p className="mt-2 text-3xl font-black tracking-tighter tabular-nums">{formatCurrency(stats.total)}</p>
+          <div className="rounded-[2rem] bg-card p-6 border border-border/40 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Gastado {periodLabel[period]}</span>
+            <p className="mt-2 text-2xl font-black tracking-tighter">{formatCurrency(stats.total)}</p>
           </div>
-          <div className="rounded-[2rem] bg-card p-6 border border-white/5 shadow-xl shadow-black/5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">vs {prevPeriodLabel[period]}</span>
-            <div className={`mt-2 flex items-center gap-1 font-black text-3xl tracking-tighter tabular-nums ${stats.change >= 0 && stats.total > 0 ? "text-red-500" : "text-emerald-500"}`}>
-              {stats.change >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+          <div className="rounded-[2rem] bg-card p-6 border border-border/40 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">vs {prevPeriodLabel[period]}</span>
+            <div className={`mt-2 flex items-center gap-1 font-black text-2xl tracking-tighter ${stats.change >= 0 ? "text-destructive" : "text-primary"}`}>
+              {stats.change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               {Math.abs(stats.change)}%
             </div>
           </div>
         </div>
 
         {/* Gráfico de Barras Horizontales */}
-        <div className="rounded-[2.5rem] bg-card p-6 border border-white/5 shadow-2xl">
-          <h2 className="mb-8 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground text-center">Distribución de Gastos</h2>
+        <div className="rounded-[2.5rem] bg-card p-6 border border-border/40 shadow-sm">
+          <h2 className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground text-center">Distribución por Categoría</h2>
           
           {stats.total > 0 ? (
-            <div className="h-[300px] w-full">
+            <ChartContainer config={chartConfig} className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.byCategory} layout="vertical" margin={{ left: -10, right: 20 }}>
+                <BarChart data={stats.byCategory} layout="vertical" margin={{ left: -20, right: 10 }}>
                   <XAxis type="number" hide />
                   <YAxis
                     type="category"
                     dataKey="label"
                     axisLine={false}
                     tickLine={false}
-                    width={90}
-                    tick={{ fill: "currentColor", fontSize: 11, fontWeight: 800, opacity: 0.8 }}
+                    width={80}
+                    tick={{ fill: "currentColor", fontSize: 10, fontWeight: 700 }}
                   />
                   <ChartTooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.03)' }} 
-                    content={<ChartTooltipContent hideLabel className="rounded-2xl border-white/10 bg-black/90 text-white" />} 
+                    cursor={{ fill: 'rgba(0,0,0,0.03)' }} 
+                    content={<ChartTooltipContent hideLabel />} 
                   />
-                  <Bar dataKey="amount" radius={[0, 8, 8, 0]} barSize={24}>
+                  <Bar dataKey="amount" radius={[0, 10, 10, 0]} barSize={20}>
                     {stats.byCategory.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.fill} 
-                        style={{ filter: `drop-shadow(0px 0px 4px ${entry.fill}40)` }}
-                      />
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </ChartContainer>
           ) : (
-            <div className="flex h-[200px] flex-col items-center justify-center gap-4 text-muted-foreground/30">
-              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <BarChart3 className="h-8 w-8" />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-widest">Sin datos en este periodo</p>
+            <div className="flex h-[200px] flex-col items-center justify-center gap-3 text-muted-foreground/40">
+              <BarChart3 className="h-12 w-12" />
+              <p className="text-xs font-bold uppercase">No hay datos suficientes</p>
             </div>
           )}
         </div>
 
-        {/* Listado de Ranking con barras de progreso */}
-        <div className="space-y-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-2">Análisis detallado</h2>
-          {stats.byCategory.map((cat, i) => (
-            <div 
-              key={cat.category} 
-              className="group rounded-[2rem] bg-card p-5 border border-white/5 shadow-lg animate-entrance"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-[1.2rem] flex items-center justify-center text-2xl shadow-inner shadow-white/5" style={{ backgroundColor: `${cat.fill}20`, color: cat.fill }}>
+        {/* Listado Detallado de Categorías */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Ranking de gastos</h2>
+          {stats.byCategory.map((cat) => (
+            <div key={cat.category} className="group rounded-3xl bg-card p-4 border border-border/40 shadow-sm transition-all hover:border-primary/20">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: `${cat.fill}15` }}>
                     {cat.emoji}
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-black text-sm uppercase tracking-tight">{cat.label}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground">{cat.percentage}% de tus gastos</span>
+                    <span className="font-bold text-sm">{cat.label}</span>
+                    <span className="text-[10px] font-bold text-primary opacity-80">{cat.percentage}% del total</span>
                   </div>
                 </div>
-                <span className="font-black text-lg tabular-nums">{formatCurrency(cat.amount)}</span>
+                <span className="font-black text-foreground">{formatCurrency(cat.amount)}</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-muted/50 overflow-hidden">
+              {/* Barra de progreso */}
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px] shadow-current" 
-                  style={{ width: `${cat.percentage}%`, backgroundColor: cat.fill, color: `${cat.fill}40` }} 
+                  className="h-full rounded-full transition-all duration-1000 ease-out" 
+                  style={{ width: `${cat.percentage}%`, backgroundColor: cat.fill }} 
                 />
               </div>
             </div>
