@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { AuthProvider } from "@/context/auth-context"
 import { ExpenseProvider } from "@/context/expense-context"
 import { ThemeProvider } from "@/context/theme-context"
+import RegisterSW from "@/components/RegisterSW"
 
 import "./globals.css"
 
@@ -27,6 +28,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Gastos Cash",
   },
+  icons: {
+    apple: "/icon-192.png",
+  },
 }
 
 export default function RootLayout({
@@ -40,6 +44,10 @@ export default function RootLayout({
         {/* Favicons y acceso directo para móviles */}
         <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
+        
+        {/* Meta tags adicionales para iOS PWA */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
 
       <body
@@ -53,6 +61,9 @@ export default function RootLayout({
             </ExpenseProvider>
           </AuthProvider>
         </ThemeProvider>
+        
+        {/* Registro del Service Worker para PWA */}
+        <RegisterSW />
       </body>
     </html>
   )
