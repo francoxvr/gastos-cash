@@ -9,33 +9,26 @@ export default function Home() {
   const { user, loading } = useAuth()
   const router = useRouter()
 
-  // Protege la ruta: si no hay usuario tras cargar, redirige al login
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login")
     }
   }, [user, loading, router])
 
-  // Pantalla de carga inicial mientras se verifica la sesión
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <img 
-            src="/icon-512.png" 
-            alt="Gastos Cash" 
-            className="mx-auto h-24 w-auto mb-4 animate-pulse" 
-          />
-          <p className="text-muted-foreground">Cargando aplicación...</p>
+        <div className="text-center animate-pulse">
+          <div className="mx-auto h-20 w-20 rounded-[2rem] bg-primary/20 flex items-center justify-center mb-4">
+             <img src="/icon-192.png" alt="Logo" className="h-12 w-12 opacity-80" />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Iniciando sesión...</p>
         </div>
       </div>
     )
   }
 
-  // Evita destellos de contenido si el usuario no está autenticado
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
   return (
     <main className="mx-auto max-w-md">
