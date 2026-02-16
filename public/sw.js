@@ -1,15 +1,12 @@
-// Service Worker para Gastos Cash PWA
+// Service Worker para Gastos Cash PWA (Next.js)
 // Versión del caché - incrementar cuando actualices archivos
 const CACHE_VERSION = 'gastos-cash-v1';
 
-// Archivos a cachear para funcionamiento offline
+// Archivos estáticos a cachear (sin index.html)
 const STATIC_CACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
-  // Agrega aquí otros archivos CSS/JS que uses
 ];
 
 // Evento de instalación - cachea archivos estáticos
@@ -19,10 +16,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
       .then((cache) => {
-        console.log('Service Worker: Cacheando archivos');
+        console.log('Service Worker: Cacheando archivos estáticos');
         return cache.addAll(STATIC_CACHE);
       })
-      .then(() => self.skipWaiting()) // Activa el SW inmediatamente
+      .then(() => self.skipWaiting())
+      .catch((error) => {
+        console.error('Service Worker: Error al cachear:', error);
+      })
   );
 });
 
@@ -40,20 +40,29 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim()) // Toma control de todas las páginas
+    }).then(() => self.clients.claim())
   );
 });
 
 // Estrategia de caché: Network First, Cache Fallback
 self.addEventListener('fetch', (event) => {
+  // Ignora requests que no sean GET
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clona la respuesta y guárdala en caché
-        const responseClone = response.clone();
-        caches.open(CACHE_VERSION).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
+        // Solo cachea respuestas exitosas
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          
+          caches.open(CACHE_VERSION).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        
         return response;
       })
       .catch(() => {
