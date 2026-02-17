@@ -1,6 +1,6 @@
 // Service Worker para Gastos Cash PWA (Next.js)
 // Versión del caché - incrementar cuando actualices archivos
-const CACHE_VERSION = 'gastos-cash-v1';
+const CACHE_VERSION = 'gastos-cash-v2';
 
 // Archivos estáticos a cachear (sin index.html)
 const STATIC_CACHE = [
@@ -51,11 +51,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Ignora requests de extensiones de Chrome y otros esquemas no HTTP(S)
+  const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
+  // Ignora requests de extensiones de navegador
+  if (event.request.url.includes('chrome-extension://')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         // Solo cachea respuestas exitosas
-        if (response && response.status === 200) {
+        if (response && response.status === 200 && response.type === 'basic') {
           const responseClone = response.clone();
           
           caches.open(CACHE_VERSION).then((cache) => {
