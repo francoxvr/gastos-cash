@@ -1,8 +1,20 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  runTransaction,
+  query,
+  orderBy,
+} from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
+import { DEFAULT_CATEGORIES } from "@/lib/seed-categories"
 
 export interface Expense {
   id: string
@@ -18,7 +30,6 @@ export interface Category {
   emoji: string
   color: string
   budget?: number | null
-  user_id?: string | null
 }
 
 interface ExpenseContextType {
@@ -54,24 +65,38 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
     setLoading(true)
     try {
-      // Cargar Gastos y Categorías en paralelo para mayor velocidad
-      const [expensesRes, categoriesRes] = await Promise.all([
-        supabase
-          .from('expenses')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false }),
-        supabase
-          .from('categories')
-          .select('*')
-          .or(`user_id.is.null,user_id.eq.${user.id}`)
-          .order('label', { ascending: true })
+      const expensesRef = collection(db, 'users', user.uid, 'expenses')
+      const categoriesRef = collection(db, 'users', user.uid, 'categories')
+
+      const [expensesSnap, categoriesSnap] = await Promise.all([
+        getDocs(query(expensesRef, orderBy('date', 'desc'))),
+        getDocs(query(categoriesRef, orderBy('label', 'asc'))),
       ])
 
-      if (expensesRes.data) setExpenses(expensesRes.data)
-      if (categoriesRes.data) setCategories(categoriesRes.data)
+      setExpenses(expensesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
+
+      if (categoriesSnap.empty) {
+        // Primer ingreso: sembramos las categorías por defecto.
+        // Se usa una transacción con un documento centinela para que,
+        // si esto se dispara más de una vez (p. ej. doble efecto en
+        // modo desarrollo), solo una siembra se aplique.
+        const seedMarkerRef = doc(db, 'users', user.uid, 'meta', 'seed')
+        await runTransaction(db, async (tx) => {
+          const marker = await tx.get(seedMarkerRef)
+          if (marker.exists()) return
+          tx.set(seedMarkerRef, { seededAt: new Date().toISOString() })
+          for (const cat of DEFAULT_CATEGORIES) {
+            tx.set(doc(categoriesRef), cat)
+          }
+        })
+
+        const seededSnap = await getDocs(query(categoriesRef, orderBy('label', 'asc')))
+        setCategories(seededSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category)))
+      } else {
+        setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category)))
+      }
     } catch (error) {
-      console.error('Error sincronizando con Supabase:', error)
+      console.error('Error sincronizando con Firestore:', error)
     } finally {
       setLoading(false)
     }
@@ -94,43 +119,39 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     // ID temporal para UI instantánea
     const tempId = crypto.randomUUID()
     const newExpense = { ...expenseData, id: tempId }
-    
+
     setExpenses(prev => [newExpense, ...prev])
 
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert({ ...expenseData, user_id: user.id })
-      .select().single()
-
-    if (error) {
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'expenses'), expenseData)
+      setExpenses(prev => prev.map(e => e.id === tempId ? { ...expenseData, id: ref.id } : e))
+    } catch (error: any) {
       setExpenses(prev => prev.filter(e => e.id !== tempId))
       alert("No se pudo guardar: " + error.message)
-    } else if (data) {
-      setExpenses(prev => prev.map(e => e.id === tempId ? data : e))
     }
   }
 
   const updateExpense = async (id: string, expenseData: Omit<Expense, "id">) => {
+    if (!user) return
     const originalExpenses = [...expenses]
     setExpenses(prev => prev.map(e => e.id === id ? { ...expenseData, id } : e))
 
-    const { error } = await supabase
-      .from('expenses')
-      .update(expenseData)
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'expenses', id), expenseData)
+    } catch {
       setExpenses(originalExpenses)
       alert("Error al actualizar")
     }
   }
 
   const deleteExpense = async (id: string) => {
+    if (!user) return
     const originalExpenses = [...expenses]
     setExpenses(prev => prev.filter(e => e.id !== id))
 
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
-    if (error) {
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'expenses', id))
+    } catch {
       setExpenses(originalExpenses)
       alert("No se pudo eliminar")
     }
@@ -138,31 +159,29 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
 
   const addCategory = async (catData: Omit<Category, "id">) => {
     if (!user) return
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({ ...catData, user_id: user.id })
-      .select().single()
-
-    if (data) setCategories(prev => [...prev, data])
-    if (error) alert("Error al crear categoría")
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'categories'), catData)
+      setCategories(prev => [...prev, { id: ref.id, ...catData }])
+    } catch {
+      alert("Error al crear categoría")
+    }
   }
 
   const updateCategoryBudget = async (id: string, budget: number | null) => {
+    if (!user) return
     const original = [...categories]
     setCategories(prev => prev.map(c => c.id === id ? { ...c, budget } : c))
 
-    const { error } = await supabase
-      .from('categories')
-      .update({ budget })
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'categories', id), { budget })
+    } catch {
       setCategories(original)
       alert("No se pudo actualizar el presupuesto")
     }
   }
 
   const deleteCategory = async (id: string) => {
+    if (!user) return
     const hasExpenses = expenses.some(e => e.category === id)
     if (hasExpenses) {
       alert("Esta categoría tiene gastos asociados y no puede borrarse.")
@@ -170,16 +189,19 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
 
     setCategories(prev => prev.filter(c => c.id !== id))
-    const { error } = await supabase.from('categories').delete().eq('id', id)
-    if (error) loadData() // Re-sincronizar si falla
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'categories', id))
+    } catch {
+      loadData() // Re-sincronizar si falla
+    }
   }
 
   return (
-    <ExpenseContext.Provider value={{ 
-      expenses, categories, addExpense, updateExpense, deleteExpense, 
+    <ExpenseContext.Provider value={{
+      expenses, categories, addExpense, updateExpense, deleteExpense,
       addCategory, updateCategoryBudget, deleteCategory, getCategoryById,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
-      loading, refreshData: loadData, clearAllExpenses: async () => {} 
+      loading, refreshData: loadData, clearAllExpenses: async () => {}
     }}>
       {children}
     </ExpenseContext.Provider>

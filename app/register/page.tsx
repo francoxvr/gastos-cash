@@ -7,7 +7,6 @@ import { useTheme } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2, Sun, Moon } from "lucide-react"
 import Link from "next/link"
 
@@ -50,11 +49,10 @@ export default function RegisterPage() {
 
     try {
       await signUp(email, password)
-      alert("¡Cuenta creada! Revisa tu email para confirmar la activación.")
-      router.push("/login")
+      router.push("/")
     } catch (err: any) {
-      setError(err.message.includes("already registered") 
-        ? "Este email ya está en uso" 
+      setError(err.code === "auth/email-already-in-use"
+        ? "Este email ya está en uso"
         : "Error al registrarse. Intenta de nuevo.")
     } finally {
       setLoading(false)

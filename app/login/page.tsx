@@ -7,14 +7,13 @@ import { useTheme } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
 import { Eye, EyeOff, Loader2, Sun, Moon } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
-  const { signIn } = useAuth()
+  const { signIn, signInWithGoogle } = useAuth()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -33,8 +32,8 @@ export default function LoginPage() {
       router.push("/")
     } catch (err: any) {
       setError(
-        err.message.includes("Invalid login credentials") 
-          ? "Email o contraseña incorrectos" 
+        err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found"
+          ? "Email o contraseña incorrectos"
           : "Error al iniciar sesión. Intenta nuevamente."
       )
     } finally {
@@ -42,21 +41,17 @@ export default function LoginPage() {
     }
   }
 
-  // Autenticación con Google (OAuth)
+  // Autenticación con Google (popup)
   const handleGoogleSignIn = async () => {
     setError("")
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-        }
-      })
-      if (error) throw error
+      await signInWithGoogle()
+      router.push("/")
     } catch (err: any) {
       setError("Error al conectar con Google")
+    } finally {
       setLoading(false)
     }
   }
