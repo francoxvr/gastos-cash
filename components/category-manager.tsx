@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
-import { ArrowLeft, Plus, Trash2, X } from "lucide-react"
+import { formatCurrency } from "@/lib/expenses"
+import { ArrowLeft, Plus, Trash2, X, Wallet, Check } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,13 +37,16 @@ interface CategoryManagerProps {
 }
 
 export function CategoryManager({ onClose }: CategoryManagerProps) {
-  const { categories, addCategory, deleteCategory, expenses } = useExpenses()
+  const { categories, addCategory, updateCategoryBudget, deleteCategory, expenses, currentMonth, currentYear } = useExpenses()
   const [showAddForm, setShowAddForm] = useState(false)
   const [newName, setNewName] = useState("")
   const [newEmoji, setNewEmoji] = useState("💰")
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[0])
+  const [newBudget, setNewBudget] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [deleteError, setDeleteError] = useState(false)
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
+  const [budgetInput, setBudgetInput] = useState("")
 
   // Memorizamos el conteo para evitar cálculos innecesarios en cada render
   const categoryCounts = useMemo(() => {
@@ -52,15 +56,41 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     }, {} as Record<string, number>)
   }, [expenses])
 
+  // Gasto del mes actual por categoría, para comparar contra el presupuesto
+  const spentThisMonth = useMemo(() => {
+    return expenses.reduce((acc, e) => {
+      const [year, month] = e.date.split('-').map(Number)
+      if ((month - 1) === currentMonth && year === currentYear) {
+        acc[e.category] = (acc[e.category] || 0) + e.amount
+      }
+      return acc
+    }, {} as Record<string, number>)
+  }, [expenses, currentMonth, currentYear])
+
   const handleAdd = () => {
     if (!newName.trim()) return
+    const parsedBudget = newBudget.trim() ? Number(newBudget) : null
     addCategory({
       label: newName.trim(),
       emoji: newEmoji,
       color: newColor,
+      budget: parsedBudget && parsedBudget > 0 ? parsedBudget : null,
     })
     setNewName("")
+    setNewBudget("")
     setShowAddForm(false)
+  }
+
+  const handleStartEditBudget = (cat: { id: string; budget?: number | null }) => {
+    setEditingBudgetId(cat.id)
+    setBudgetInput(cat.budget ? String(cat.budget) : "")
+  }
+
+  const handleSaveBudget = (id: string) => {
+    const parsed = budgetInput.trim() ? Number(budgetInput) : null
+    updateCategoryBudget(id, parsed && parsed > 0 ? parsed : null)
+    setEditingBudgetId(null)
+    setBudgetInput("")
   }
 
   const handleDelete = () => {
@@ -85,32 +115,93 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <div className="flex flex-1 flex-col gap-4 px-4 pb-24">
         {/* Lista de categorías */}
         <div className="flex flex-col gap-2">
-          {categories.map((cat, index) => (
-            <div
-              key={cat.id}
-              className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-sm animate-entrance"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
+          {categories.map((cat, index) => {
+            const spent = spentThisMonth[cat.id] || 0
+            const budget = cat.budget || null
+            const percentage = budget ? Math.min(Math.round((spent / budget) * 100), 100) : 0
+            const overBudget = budget ? spent > budget : false
+            const isEditing = editingBudgetId === cat.id
+
+            return (
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl"
-                style={{ backgroundColor: `${cat.color}20` }}
+                key={cat.id}
+                className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-sm animate-entrance"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
-                {cat.emoji}
+                <div className="flex items-center gap-4">
+                  <div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl"
+                    style={{ backgroundColor: `${cat.color}20` }}
+                  >
+                    {cat.emoji}
+                  </div>
+                  <div className="flex flex-1 flex-col">
+                    <span className="font-medium">{cat.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {categoryCounts[cat.id] || 0} {categoryCounts[cat.id] === 1 ? "gasto" : "gastos"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setDeleteTarget({ id: cat.id, label: cat.label })}
+                    className="p-2 text-muted-foreground hover:text-destructive transition-colors active-press"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Presupuesto mensual */}
+                {isEditing ? (
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="Sin límite"
+                      value={budgetInput}
+                      onChange={(e) => setBudgetInput(e.target.value)}
+                      className="h-9 flex-1 rounded-xl text-sm"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleSaveBudget(cat.id)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground active-press"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditingBudgetId(null)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted active-press"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : budget ? (
+                  <button onClick={() => handleStartEditBudget(cat)} className="flex flex-col gap-1.5 text-left active-press">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <span>Presupuesto mensual</span>
+                      <span className={overBudget ? "text-destructive" : "text-foreground"}>
+                        {formatCurrency(spent)} / {formatCurrency(budget)}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${overBudget ? "bg-destructive" : "bg-primary"}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleStartEditBudget(cat)}
+                    className="flex items-center gap-2 text-xs font-medium text-muted-foreground active-press"
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    Definir presupuesto mensual
+                  </button>
+                )}
               </div>
-              <div className="flex flex-1 flex-col">
-                <span className="font-medium">{cat.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {categoryCounts[cat.id] || 0} {categoryCounts[cat.id] === 1 ? "gasto" : "gastos"}
-                </span>
-              </div>
-              <button
-                onClick={() => setDeleteTarget({ id: cat.id, label: cat.label })}
-                className="p-2 text-muted-foreground hover:text-destructive transition-colors active-press"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Formulario para añadir */}
@@ -165,6 +256,19 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                     />
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cat-budget">Presupuesto mensual (opcional)</Label>
+                <Input
+                  id="cat-budget"
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="Ej: 50000"
+                  value={newBudget}
+                  onChange={(e) => setNewBudget(e.target.value)}
+                  className="h-12 rounded-2xl"
+                />
               </div>
 
               <Button onClick={handleAdd} disabled={!newName.trim()} className="w-full h-12 rounded-2xl active-press">

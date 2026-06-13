@@ -64,6 +64,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
         amount: categoryTotal,
         fill: cat.color,
         percentage: total > 0 ? Math.round((categoryTotal / total) * 100) : 0,
+        budget: cat.budget || null,
       }
     }).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount)
 
@@ -204,11 +205,21 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
               </div>
               {/* Barra de progreso */}
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                <div 
-                  className="h-full rounded-full transition-all duration-1000 ease-out" 
-                  style={{ width: `${cat.percentage}%`, backgroundColor: cat.fill }} 
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${cat.percentage}%`, backgroundColor: cat.fill }}
                 />
               </div>
+
+              {/* Presupuesto mensual, si está definido */}
+              {period === "mes" && cat.budget && (
+                <div className="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <span className="text-muted-foreground">Presupuesto</span>
+                  <span className={cat.amount > cat.budget ? "text-destructive" : "text-muted-foreground"}>
+                    {formatCurrency(cat.amount)} / {formatCurrency(cat.budget)}
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>

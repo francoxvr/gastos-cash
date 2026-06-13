@@ -17,6 +17,7 @@ export interface Category {
   label: string
   emoji: string
   color: string
+  budget?: number | null
   user_id?: string | null
 }
 
@@ -28,6 +29,7 @@ interface ExpenseContextType {
   deleteExpense: (id: string) => Promise<void>
   clearAllExpenses: () => Promise<void>
   addCategory: (category: Omit<Category, "id">) => Promise<void>
+  updateCategoryBudget: (id: string, budget: number | null) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
   getCategoryById: (id: string) => Category | undefined
   currentMonth: number
@@ -145,6 +147,21 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     if (error) alert("Error al crear categoría")
   }
 
+  const updateCategoryBudget = async (id: string, budget: number | null) => {
+    const original = [...categories]
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, budget } : c))
+
+    const { error } = await supabase
+      .from('categories')
+      .update({ budget })
+      .eq('id', id)
+
+    if (error) {
+      setCategories(original)
+      alert("No se pudo actualizar el presupuesto")
+    }
+  }
+
   const deleteCategory = async (id: string) => {
     const hasExpenses = expenses.some(e => e.category === id)
     if (hasExpenses) {
@@ -160,7 +177,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   return (
     <ExpenseContext.Provider value={{ 
       expenses, categories, addExpense, updateExpense, deleteExpense, 
-      addCategory, deleteCategory, getCategoryById, 
+      addCategory, updateCategoryBudget, deleteCategory, getCategoryById,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
       loading, refreshData: loadData, clearAllExpenses: async () => {} 
     }}>
