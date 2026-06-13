@@ -31,6 +31,23 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
 
   const isInvalid = !amount || Number.parseFloat(amount) <= 0
 
+  // Formatea el monto para mostrarlo con puntos de mil (ej: 700000 -> 700.000)
+  const formatAmountDisplay = (value: string) => {
+    if (!value) return ""
+    const [intPart, decPart] = value.split(".")
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+    return decPart !== undefined ? `${formattedInt},${decPart}` : formattedInt
+  }
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Quita los puntos de mil y convierte la coma decimal en punto
+    let cleaned = e.target.value.replace(/\./g, "").replace(",", ".")
+    cleaned = cleaned.replace(/[^0-9.]/g, "")
+    const parts = cleaned.split(".")
+    if (parts.length > 2) cleaned = parts[0] + "." + parts.slice(1).join("")
+    setAmount(cleaned)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isInvalid) return
@@ -79,12 +96,11 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
           <div className="relative flex items-center justify-center">
             <span className="absolute -left-8 text-4xl font-black opacity-20">$</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+              value={formatAmountDisplay(amount)}
+              onChange={handleAmountChange}
               className="w-full bg-transparent text-center text-7xl font-black outline-none placeholder:opacity-10 tabular-nums"
               autoFocus
               required
