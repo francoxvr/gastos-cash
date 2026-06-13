@@ -62,7 +62,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       <header className="sticky top-0 z-10 flex items-center justify-between bg-background/80 px-4 py-6 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground transition-all active-press"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-foreground transition-all active-press shadow-sm"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -104,10 +104,10 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
                   key={cat.id}
                   type="button"
                   onClick={() => setCategory(cat.id)}
-                  className={`flex flex-col items-center gap-2 rounded-[2rem] border-2 py-5 transition-all duration-300 active-press ${
-                    isSelected 
-                    ? "border-primary bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-105" 
-                    : "border-border/40 bg-card text-muted-foreground opacity-60"
+                  className={`flex flex-col items-center gap-2 rounded-3xl py-5 transition-all duration-300 active-press ${
+                    isSelected
+                    ? "bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-105"
+                    : "bg-card text-muted-foreground opacity-60"
                   }`}
                 >
                   <span className="text-3xl">{cat.emoji}</span>
@@ -129,7 +129,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               placeholder="¿En qué lo gastaste? (Opcional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="h-16 w-full rounded-3xl bg-muted/40 pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 focus:bg-muted/20"
+              className="h-16 w-full rounded-3xl bg-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
             />
           </div>
 
@@ -142,7 +142,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="h-16 w-full rounded-3xl bg-muted/40 pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 focus:bg-muted/20"
+              className="h-16 w-full rounded-3xl bg-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
             />
           </div>
         </div>
@@ -153,8 +153,8 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             type="submit"
             disabled={isInvalid || isSubmitting}
             className={`flex h-20 w-full items-center justify-center gap-3 rounded-[2.5rem] text-lg font-black uppercase tracking-[0.2em] transition-all active-press shadow-2xl ${
-              isSubmitting 
-              ? "bg-green-500 text-white" 
+              isSubmitting
+              ? "bg-success text-success-foreground"
               : "bg-primary text-primary-foreground shadow-primary/30"
             } disabled:opacity-30 disabled:grayscale`}
           >

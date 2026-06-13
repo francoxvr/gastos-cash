@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/auth-context"
 import { ExpenseProvider } from "@/context/expense-context"
 import { ThemeProvider } from "@/context/theme-context"
 import RegisterSW from "@/components/RegisterSW"
+import Script from "next/script"  // ← AGREGADO
 
 import "./globals.css"
 
@@ -13,7 +14,7 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 // Configuración de la apariencia del navegador
 export const viewport: Viewport = {
-  themeColor: "#14b8a6",
+  themeColor: "#10b981",
   width: "device-width",
   initialScale: 1,
 }
@@ -64,6 +65,14 @@ export default function RootLayout({
         
         {/* Registro del Service Worker para PWA */}
         <RegisterSW />
+
+        {/* Google AdSense - CORREGIDO */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1354479450339899"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )

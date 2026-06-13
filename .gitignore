@@ -10,3 +10,7 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
+
+# Test artifacts
+test-results/
+playwright-report/

@@ -64,8 +64,8 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
           return (
             <div
               key={expense.id}
-              className={`group relative overflow-hidden rounded-[2rem] transition-all duration-300 animate-entrance
-                ${isExpanded ? "bg-primary shadow-xl shadow-primary/20" : "bg-card border border-border/40"}`}
+              className={`group relative overflow-hidden rounded-3xl transition-all duration-300 animate-entrance shadow-sm
+                ${isExpanded ? "bg-primary shadow-xl shadow-primary/20" : "bg-card"}`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <button
@@ -111,32 +111,30 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                 </div>
               </button>
 
-              {/* Acciones Expandibles - FONDO GRIS CON ÉNFASIS */}
+              {/* Acciones Expandibles */}
               {isExpanded && (
-                <div className="flex border-t border-white/10 animate-slide-down">
-                  {/* Botón Editar - GRIS CON CÍRCULO CELESTE-VERDE */}
+                <div className="flex border-t border-white/15 animate-slide-down">
                   <button
                     onClick={() => { onEdit(expense); setExpandedId(null); }}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press 
-                      bg-gray-500/30 hover:bg-gray-500/40 text-white"
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
+                      bg-white/10 hover:bg-white/15 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary shadow-lg">
-                      <Pencil className="h-4 w-4 text-white" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-lg">
+                      <Pencil className="h-4 w-4 text-primary-foreground" />
                     </div>
                     Editar
                   </button>
-                  
+
                   {/* Divisor */}
-                  <div className="w-[1px] bg-white/10 my-4" />
-                  
-                  {/* Botón Eliminar - GRIS CON CÍRCULO CELESTE-VERDE */}
+                  <div className="w-[1px] bg-white/15 my-4" />
+
                   <button
                     onClick={() => setDeleteTarget(expense)}
                     className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
-                      bg-gray-500/30 hover:bg-gray-500/40 text-white"
+                      bg-white/10 hover:bg-white/15 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary shadow-lg">
-                      <Trash2 className="h-4 w-4 text-white" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-lg">
+                      <Trash2 className="h-4 w-4 text-primary-foreground" />
                     </div>
                     Eliminar
                   </button>

@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { ExpenseList } from "@/components/expense-list"
 import { AddExpenseForm } from "@/components/add-expense-form"
+import { ExpenseList } from "@/components/expense-list"
 import { StatsScreen } from "@/components/stats-screen"
 import { ExpenseCalendar } from "@/components/expense-calendar"
 import { CategoryManager } from "@/components/category-manager"
@@ -11,132 +10,352 @@ import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
-import { 
-  Plus, BarChart3, CalendarHeart, Tag, Sun, Moon, ArrowLeft, 
-  CalendarDays, CalendarClock, CalendarRange, Calendar, Trash2, Download, LogOut 
+import {
+  Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles,
 } from "lucide-react"
 
-type Screen = "home" | "add" | "edit" | "stats" | "calendar" | "categories"
-type TimeFilter = "dia" | "semana" | "mes" | "anio"
+type Tab = "home" | "stats" | "calendar" | "more"
+type Overlay = "add" | "edit" | "categories" | null
 
 export function ExpenseApp() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("home")
+  const [tab, setTab] = useState<Tab>("home")
+  const [overlay, setOverlay] = useState<Overlay>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("dia") 
-  
-  const { expenses, clearAllExpenses, currentMonth, currentYear } = useExpenses()
+  const [timeFilter, setTimeFilter] = useState<"dia" | "semana" | "mes" | "anio">("mes")
+  const [mounted, setMounted] = useState(false)
+
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear } = useExpenses()
   const { theme, toggleTheme } = useTheme()
   const { signOut } = useAuth()
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
-  const handleClearAll = async () => {
-    if (confirm("⚠️ ¿Vaciar toda tu cuenta?")) {
-      await clearAllExpenses()
-    }
-  }
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], [])
 
-  const filteredTotal = useMemo(() => {
+  const periodExpenses = useMemo(() => {
     const now = new Date()
-    const todayStr = now.toISOString().split('T')[0]
-    
-    return expenses
-      .filter((expense) => {
-        const [year, month, day] = expense.date.split('-').map(Number)
-        const expenseDateObj = new Date(year, month - 1, day)
-        
-        if (timeFilter === "dia") return expense.date === todayStr
-        if (timeFilter === "semana") {
-          const startOfWeek = new Date(now)
-          startOfWeek.setDate(now.getDate() - now.getDay())
-          return expenseDateObj >= startOfWeek && expenseDateObj <= now
-        }
-        if (timeFilter === "mes") return (month - 1) === currentMonth && year === currentYear
-        return year === currentYear
-      })
-      .reduce((sum, e) => sum + e.amount, 0)
-  }, [expenses, timeFilter, currentMonth, currentYear])
+    return expenses.filter((e) => {
+      const [year, month, day] = e.date.split("-").map(Number)
+      const d = new Date(year, month - 1, day)
+      if (timeFilter === "dia") return e.date === todayStr
+      if (timeFilter === "semana") {
+        const start = new Date(now)
+        start.setDate(now.getDate() - now.getDay())
+        return d >= start && d <= now
+      }
+      if (timeFilter === "mes") return (month - 1) === currentMonth && year === currentYear
+      return year === currentYear
+    })
+  }, [expenses, timeFilter, currentMonth, currentYear, todayStr])
 
-  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-  const filterLabel = { dia: "Hoy", semana: "esta semana", mes: monthNames[currentMonth], anio: `${currentYear}` }
+  const filteredTotal = useMemo(
+    () => periodExpenses.reduce((sum, e) => sum + e.amount, 0),
+    [periodExpenses]
+  )
+
+  const todayTotal = useMemo(
+    () => expenses.filter((e) => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
+    [expenses, todayStr]
+  )
+
+  const topCategory = useMemo(() => {
+    const totals = new Map<string, number>()
+    for (const e of periodExpenses) {
+      totals.set(e.category, (totals.get(e.category) || 0) + e.amount)
+    }
+    let best: { id: string; amount: number } | null = null
+    for (const [id, amount] of totals) {
+      if (!best || amount > best.amount) best = { id, amount }
+    }
+    return best ? { ...best, cat: getCategoryById(best.id) } : null
+  }, [periodExpenses, getCategoryById])
+
+  const MONTH_NAMES = [
+    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
+  ]
+
+  const periodLabel = {
+    dia: "Hoy",
+    semana: "Esta semana",
+    mes: MONTH_NAMES[currentMonth],
+    anio: `Año ${currentYear}`,
+  }
 
   if (!mounted) return null
 
-  if (currentScreen === "add") return <AddExpenseForm onClose={() => setCurrentScreen("home")} />
-  if (currentScreen === "edit") return <AddExpenseForm onClose={() => setCurrentScreen("home")} editingExpense={editingExpense} />
-  if (currentScreen === "stats") return <StatsScreen onClose={() => setCurrentScreen("home")} />
-  if (currentScreen === "categories") return <CategoryManager onClose={() => setCurrentScreen("home")} />
-  if (currentScreen === "calendar") return (
-    <div className="flex min-h-screen flex-col bg-background animate-fade-in">
-      <header className="sticky top-0 z-20 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md border-b border-border/40">
-        <button onClick={() => setCurrentScreen("home")} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted active-press"><ArrowLeft className="h-6 w-6" /></button>
-        <h1 className="text-xl font-semibold">Calendario</h1>
-      </header>
-      <div className="flex-1 px-4 py-4"><ExpenseCalendar /></div>
-    </div>
-  )
+  const openEdit = (expense: Expense) => {
+    setEditingExpense(expense)
+    setOverlay("edit")
+  }
+
+  const closeOverlay = () => {
+    setOverlay(null)
+    setEditingExpense(null)
+  }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background animate-fade-in">
-      <header className="sticky top-0 z-20 flex items-center justify-between bg-background/80 px-4 py-4 backdrop-blur-md border-b border-border/10">
-        <div className="flex items-center gap-2">
-          <img src="/icon-192.png" alt="Logo" className="h-8 w-8 rounded-lg" />
-          <span className="font-bold text-lg tracking-tight">Gastos Cash</span>
+    <div className="flex h-[100dvh] flex-col bg-background overflow-hidden">
+
+      {/* ── Overlays ── */}
+      {(overlay === "add" || overlay === "edit") && (
+        <div className="fixed inset-0 z-50">
+          <AddExpenseForm
+            onClose={closeOverlay}
+            editingExpense={overlay === "edit" ? editingExpense : null}
+          />
         </div>
-        
-        <div className="flex items-center gap-1">
-          <button onClick={() => exportToCSV(expenses)} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors active-press"><Download className="h-5 w-5" /></button>
-          <button onClick={handleClearAll} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-red-50 text-red-500 transition-colors active-press"><Trash2 className="h-5 w-5" /></button>
-          <div className="w-[1px] h-6 bg-border mx-1" />
-          <button onClick={toggleTheme} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted active-press">
-            {theme === "light" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      )}
+      {overlay === "categories" && (
+        <div className="fixed inset-0 z-50">
+          <CategoryManager onClose={closeOverlay} />
+        </div>
+      )}
+
+      {/* ── Header ── */}
+      <header className="flex items-center justify-between px-5 py-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+            <Wallet className="h-[18px] w-[18px] text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          <span className="font-extrabold text-base tracking-tight">Gastos Cash</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleTheme}
+            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-card text-muted-foreground active-press transition-colors"
+          >
+            {theme === "light" ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
           </button>
-          <button onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground active-press"><LogOut className="h-5 w-5" /></button>
+          <button
+            onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
+            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-card text-muted-foreground active-press transition-colors"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+          </button>
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-6 px-4 pt-4 pb-40">
-        <div className="flex gap-1.5 rounded-2xl bg-muted/50 p-1.5 border border-border/50">
-          {[{ key: "dia", label: "Día", icon: CalendarDays }, { key: "semana", label: "Semana", icon: CalendarClock }, { key: "mes", label: "Mes", icon: CalendarRange }, { key: "anio", label: "Año", icon: Calendar }].map((tab) => (
-            <button key={tab.key} onClick={() => setTimeFilter(tab.key as TimeFilter)} className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-all active-press ${timeFilter === tab.key ? "bg-background text-primary shadow-sm border border-border/10" : "text-muted-foreground opacity-70"}`}>
-              <tab.icon className="h-3.5 w-3.5" /> {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* ── Tab Content ── */}
+      <main className="flex-1 overflow-y-auto overscroll-none">
 
-        <div className="rounded-[2.5rem] bg-primary p-8 text-primary-foreground shadow-2xl shadow-primary/20 relative overflow-hidden group">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-          <p className="text-sm font-medium opacity-80 mb-1">Total de {filterLabel[timeFilter]}</p>
-          <h2 className="text-5xl font-bold tracking-tighter">{formatCurrency(filteredTotal)}</h2>
-        </div>
+        {/* HOME */}
+        {tab === "home" && (
+          <div className="flex flex-col gap-4 px-4 pb-6 animate-fade-in">
 
-        <div className="grid grid-cols-3 gap-3">
-          <button onClick={() => setCurrentScreen("stats")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
-            <div className="p-3 bg-blue-500/10 text-blue-600 rounded-2xl"><BarChart3 className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Estadísticas</span>
-          </button>
-          <button onClick={() => setCurrentScreen("calendar")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
-            <div className="p-3 bg-purple-500/10 text-purple-600 rounded-2xl"><CalendarHeart className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Calendario</span>
-          </button>
-          <button onClick={() => setCurrentScreen("categories")} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-card border border-border/40 hover:bg-muted/50 transition-colors active-press">
-            <div className="p-3 bg-orange-500/10 text-orange-600 rounded-2xl"><Tag className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categorías</span>
-          </button>
-        </div>
+            {/* Time filter pills */}
+            <div className="flex gap-1.5 bg-card rounded-2xl p-1.5 shadow-sm">
+              {(["dia","semana","mes","anio"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setTimeFilter(f)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all active-press ${
+                    timeFilter === f
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {periodLabel[f]}
+                </button>
+              ))}
+            </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold">Gastos recientes</h2>
-          <ExpenseList onEdit={(e) => { setEditingExpense(e); setCurrentScreen("edit"); }} />
-        </div>
+            {/* Bento: Balance card */}
+            <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-xl shadow-primary/20">
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+              <div className="absolute right-6 bottom-6 h-16 w-16 rounded-full bg-white/10 pointer-events-none" />
+              <p className="text-sm font-bold text-primary-foreground/70 mb-2 relative z-10">{periodLabel[timeFilter]}</p>
+              <h2 className="text-[2.75rem] font-black tracking-tight leading-none tabular-nums relative z-10">
+                {formatCurrency(filteredTotal)}
+              </h2>
+              <p className="text-xs text-primary-foreground/60 mt-2 font-semibold relative z-10">total gastado</p>
+            </div>
+
+            {/* Bento: secondary cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-card p-4 shadow-sm flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Hoy</span>
+                </div>
+                <span className="text-xl font-black tabular-nums tracking-tight">{formatCurrency(todayTotal)}</span>
+              </div>
+              <div className="rounded-2xl bg-card p-4 shadow-sm flex flex-col gap-1 overflow-hidden">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Tag className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Top categoría</span>
+                </div>
+                {topCategory?.cat ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{topCategory.cat.emoji}</span>
+                    <span className="text-sm font-extrabold truncate">{topCategory.cat.label}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm font-bold text-muted-foreground/50">Sin datos</span>
+                )}
+              </div>
+            </div>
+
+            {/* Expense list */}
+            <div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 mt-1">
+                Movimientos
+              </p>
+              <ExpenseList onEdit={openEdit} />
+            </div>
+          </div>
+        )}
+
+        {/* STATS */}
+        {tab === "stats" && (
+          <div className="animate-fade-in">
+            <StatsScreen onClose={() => setTab("home")} />
+          </div>
+        )}
+
+        {/* CALENDAR */}
+        {tab === "calendar" && (
+          <div className="px-4 pt-2 pb-6 animate-fade-in">
+            <p className="text-xl font-extrabold mb-4">Calendario</p>
+            <ExpenseCalendar />
+          </div>
+        )}
+
+        {/* MORE */}
+        {tab === "more" && (
+          <div className="flex flex-col px-4 pt-2 pb-6 gap-3 animate-fade-in">
+            <p className="text-xl font-extrabold mb-1">Ajustes</p>
+
+            {/* Main options */}
+            <div className="rounded-2xl overflow-hidden bg-card divide-y divide-border/50 shadow-sm">
+
+              <button
+                onClick={() => setOverlay("categories")}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <Tag className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Categorías</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => exportToCSV(expenses)}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <Download className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Exportar CSV</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={toggleTheme}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    {theme === "light"
+                      ? <Moon className="h-4 w-4 text-accent-foreground" />
+                      : <Sun className="h-4 w-4 text-accent-foreground" />}
+                  </div>
+                  <span className="font-semibold text-sm">
+                    {theme === "light" ? "Modo oscuro" : "Modo claro"}
+                  </span>
+                </div>
+                <div className={`relative h-5 w-9 rounded-full transition-colors ${theme === "dark" ? "bg-primary" : "bg-muted-foreground/30"}`}>
+                  <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${theme === "dark" ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+              </button>
+            </div>
+
+            {/* Sign out */}
+            <div className="rounded-2xl overflow-hidden bg-card shadow-sm">
+              <button
+                onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
+                className="flex items-center gap-3 w-full px-4 py-3.5 active-press hover:bg-destructive/5 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                  <LogOut className="h-4 w-4 text-destructive" />
+                </div>
+                <span className="font-semibold text-sm text-destructive">Cerrar sesión</span>
+              </button>
+            </div>
+
+            {/* Danger zone */}
+            <div className="rounded-2xl overflow-hidden bg-card shadow-sm">
+              <button
+                onClick={async () => {
+                  if (confirm("⚠️ ¿Eliminar TODOS los gastos? Esta acción no se puede deshacer.")) {
+                    await clearAllExpenses()
+                  }
+                }}
+                className="flex items-center gap-3 w-full px-4 py-3.5 active-press hover:bg-destructive/5 transition-colors"
+              >
+                <div className="h-9 w-9 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </div>
+                <span className="font-semibold text-sm text-destructive">Vaciar todos los gastos</span>
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
-      <div className="fixed bottom-8 left-0 right-0 z-[50] px-6 flex justify-center pointer-events-none">
-        <Button onClick={() => setCurrentScreen("add")} size="lg" className="h-16 w-full max-w-md text-lg font-bold shadow-2xl active-press rounded-2xl bg-primary text-primary-foreground pointer-events-auto">
-          <Plus className="mr-2 h-7 w-7 stroke-[3px]" /> Agregar gasto
-        </Button>
-      </div>
+      {/* ── Bottom Navigation ── */}
+      <nav className="flex items-end justify-around px-2 pt-2 pb-5 bg-card/95 backdrop-blur-xl border-t border-border/50 shrink-0">
+        {(["home","stats"] as const).map((key) => {
+          const Icon = key === "home" ? Home : BarChart3
+          const label = key === "home" ? "Inicio" : "Stats"
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-1 rounded-xl transition-all active-press ${
+                tab === key ? "text-primary" : "text-muted-foreground/50"
+              }`}
+            >
+              <Icon className="h-5 w-5" strokeWidth={tab === key ? 2.5 : 1.8} />
+              <span className="text-[10px] font-bold">{label}</span>
+            </button>
+          )
+        })}
+
+        {/* Center add button */}
+        <div className="flex flex-col items-center px-3 -mt-5">
+          <button
+            onClick={() => setOverlay("add")}
+            className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/35 active-press"
+          >
+            <Plus className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
+          </button>
+          <span className="text-[10px] font-bold text-muted-foreground/50 mt-1">Agregar</span>
+        </div>
+
+        {(["calendar","more"] as const).map((key) => {
+          const Icon = key === "calendar" ? CalendarDays : MoreHorizontal
+          const label = key === "calendar" ? "Calendario" : "Más"
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-1 rounded-xl transition-all active-press ${
+                tab === key ? "text-primary" : "text-muted-foreground/50"
+              }`}
+            >
+              <Icon className="h-5 w-5" strokeWidth={tab === key ? 2.5 : 1.8} />
+              <span className="text-[10px] font-bold">{label}</span>
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }

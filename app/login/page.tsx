@@ -67,15 +67,15 @@ export default function LoginPage() {
       {/* Selector de modo oscuro/claro */}
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors z-50 active-press"
+        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-2xl bg-card transition-colors z-50 active-press"
       >
         {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
       </button>
 
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/icon-512.png" alt="Logo" className="mx-auto h-20 w-20 mb-4 animate-entrance" />
-          <h1 className="text-3xl font-bold tracking-tight">Bienvenido a Gastos Cash</h1>
+          <img src="/icon-512.png" alt="Logo" className="mx-auto h-20 w-20 mb-4 rounded-3xl shadow-xl shadow-primary/25 animate-entrance" />
+          <h1 className="text-3xl font-extrabold tracking-tight">Bienvenido a Gastos Cash</h1>
           <p className="mt-2 text-muted-foreground">Inicia sesión en tu cuenta</p>
         </div>
 
@@ -83,7 +83,7 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-lg border-2 border-border bg-background px-4 py-3 font-medium transition-colors hover:bg-muted disabled:opacity-50 active-press"
+          className="w-full flex items-center justify-center gap-3 rounded-2xl bg-card px-4 py-3 font-semibold shadow-sm transition-colors hover:bg-muted disabled:opacity-50 active-press"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
             <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -106,7 +106,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required disabled={loading} />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required disabled={loading} className="h-12 rounded-2xl bg-card" />
           </div>
 
           <div className="space-y-2">
@@ -119,7 +119,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="pr-10"
+                className="h-12 rounded-2xl bg-card pr-10"
               />
               <button
                 type="button"
@@ -132,17 +132,17 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive animate-fade-in">
+            <div className="rounded-2xl bg-destructive/10 p-3 text-sm text-destructive animate-fade-in">
               {error}
             </div>
           )}
 
-          <Button type="submit" className="w-full h-11 active-press" disabled={loading}>
+          <Button type="submit" className="w-full h-12 rounded-2xl active-press" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Iniciar sesión"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta? <Link href="/register" className="text-primary font-medium hover:underline">Regístrate</Link>
+            ¿No tienes cuenta? <Link href="/register" className="text-primary font-bold hover:underline">Regístrate</Link>
           </p>
         </form>
       </div>

@@ -75,11 +75,11 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-muted active-press"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card active-press"
         >
-          <ArrowLeft className="h-6 w-6" />
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-semibold">Categorías</h1>
+        <h1 className="text-xl font-extrabold">Categorías</h1>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 px-4 pb-24">
@@ -88,7 +88,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
           {categories.map((cat, index) => (
             <div
               key={cat.id}
-              className="flex items-center gap-4 rounded-xl bg-card p-4 shadow-sm animate-entrance"
+              className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-sm animate-entrance"
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <div
@@ -115,10 +115,10 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
         {/* Formulario para añadir */}
         {showAddForm && (
-          <div className="animate-scale-in flex flex-col gap-4 rounded-2xl bg-card p-5 border shadow-lg mt-4">
+          <div className="animate-scale-in flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-lg mt-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Nueva categoría</h2>
-              <button onClick={() => setShowAddForm(false)} className="p-1 hover:bg-muted rounded-full">
+              <h2 className="text-lg font-bold">Nueva categoría</h2>
+              <button onClick={() => setShowAddForm(false)} className="p-1.5 hover:bg-muted rounded-full active-press">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -131,7 +131,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                   placeholder="Ej: Mascotas"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="h-12"
+                  className="h-12 rounded-2xl"
                   autoFocus
                 />
               </div>
@@ -144,7 +144,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                       key={emoji}
                       type="button"
                       onClick={() => setNewEmoji(emoji)}
-                      className={`h-10 w-10 text-xl rounded-lg transition-all ${newEmoji === emoji ? 'bg-primary scale-110 shadow-md' : 'bg-muted'}`}
+                      className={`h-10 w-10 text-xl rounded-xl transition-all active-press ${newEmoji === emoji ? 'bg-primary scale-110 shadow-md' : 'bg-muted'}`}
                     >
                       {emoji}
                     </button>
@@ -160,14 +160,14 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                       key={color}
                       type="button"
                       onClick={() => setNewColor(color)}
-                      className={`h-8 w-8 rounded-full border-2 ${newColor === color ? 'border-primary scale-125' : 'border-transparent'}`}
+                      className={`h-8 w-8 rounded-full border-2 transition-all active-press ${newColor === color ? 'border-primary scale-125' : 'border-transparent'}`}
                       style={{ backgroundColor: color }}
                     />
                   ))}
                 </div>
               </div>
 
-              <Button onClick={handleAdd} disabled={!newName.trim()} className="w-full h-12 active-press">
+              <Button onClick={handleAdd} disabled={!newName.trim()} className="w-full h-12 rounded-2xl active-press">
                 Guardar categoría
               </Button>
             </div>
@@ -178,7 +178,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       {/* Botón flotante inferior */}
       {!showAddForm && (
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent">
-          <Button onClick={() => setShowAddForm(true)} size="lg" className="w-full h-14 text-lg shadow-xl active-press">
+          <Button onClick={() => setShowAddForm(true)} size="lg" className="w-full h-14 text-lg rounded-2xl shadow-xl active-press">
             <Plus className="mr-2 h-6 w-6" /> Agregar categoría
           </Button>
         </div>
@@ -186,32 +186,32 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
       {/* Diálogos de Alerta */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <AlertDialogContent className="rounded-2xl w-[90%]">
+        <AlertDialogContent className="rounded-3xl w-[90%]">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar categoría?</AlertDialogTitle>
             <AlertDialogDescription>
-              La categoría "{deleteTarget?.label}" se eliminará permanentemente. 
+              La categoría "{deleteTarget?.label}" se eliminará permanentemente.
               Solo puedes borrar categorías que no tengan gastos registrados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-2 mt-4">
-            <AlertDialogCancel className="flex-1 mt-0">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="flex-1 bg-destructive text-white">Eliminar</AlertDialogAction>
+            <AlertDialogCancel className="flex-1 mt-0 rounded-2xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-2xl">Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={deleteError} onOpenChange={() => setDeleteError(false)}>
-        <AlertDialogContent className="rounded-2xl w-[90%]">
+        <AlertDialogContent className="rounded-3xl w-[90%]">
           <AlertDialogHeader>
             <AlertDialogTitle>Acción denegada</AlertDialogTitle>
             <AlertDialogDescription>
-              No puedes eliminar esta categoría porque tiene gastos asociados. 
+              No puedes eliminar esta categoría porque tiene gastos asociados.
               Borra o mueve esos gastos antes de intentar de nuevo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction className="w-full">Entendido</AlertDialogAction>
+            <AlertDialogAction className="w-full rounded-2xl">Entendido</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

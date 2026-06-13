@@ -67,15 +67,15 @@ export default function RegisterPage() {
       {/* Selector de tema */}
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors z-50 active-press"
+        className="fixed top-4 right-4 h-10 w-10 flex items-center justify-center rounded-2xl bg-card transition-colors z-50 active-press"
       >
         {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
       </button>
 
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/icon-512.png" alt="Logo" className="mx-auto h-20 w-auto mb-4 animate-entrance" />
-          <h1 className="text-3xl font-bold tracking-tight">Crear cuenta</h1>
+          <img src="/icon-512.png" alt="Logo" className="mx-auto h-20 w-20 mb-4 rounded-3xl shadow-xl shadow-primary/25 animate-entrance" />
+          <h1 className="text-3xl font-extrabold tracking-tight">Crear cuenta</h1>
           <p className="mt-2 text-muted-foreground">Comienza a controlar tus gastos</p>
         </div>
 
@@ -91,12 +91,12 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => handleBlur('email')}
-                className={touched.email ? (isEmailValid ? 'border-green-500' : 'border-destructive') : ''}
+                className={`h-12 rounded-2xl bg-card pr-10 ${touched.email ? (isEmailValid ? 'border-success' : 'border-destructive') : ''}`}
                 required
               />
               {touched.email && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {isEmailValid ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
+                  {isEmailValid ? <CheckCircle2 className="h-4 w-4 text-success" /> : <XCircle className="h-4 w-4 text-destructive" />}
                 </div>
               )}
             </div>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={() => handleBlur('password')}
-                className="pr-10"
+                className="h-12 rounded-2xl bg-card pr-10"
                 required
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -140,20 +140,20 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={() => handleBlur('confirmPassword')}
-                className={touched.confirmPassword ? (isConfirmPasswordValid ? 'border-green-500' : 'border-destructive') : ''}
+                className={`h-12 rounded-2xl bg-card ${touched.confirmPassword ? (isConfirmPasswordValid ? 'border-success' : 'border-destructive') : ''}`}
                 required
               />
             </div>
           </div>
 
-          {error && <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-lg border border-destructive/20">{error}</div>}
+          {error && <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-2xl">{error}</div>}
 
-          <Button type="submit" className="w-full h-11 active-press" disabled={loading || !isFormValid}>
+          <Button type="submit" className="w-full h-12 rounded-2xl active-press" disabled={loading || !isFormValid}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear cuenta"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            ¿Ya tienes cuenta? <Link href="/login" className="text-primary font-medium hover:underline">Inicia sesión</Link>
+            ¿Ya tienes cuenta? <Link href="/login" className="text-primary font-bold hover:underline">Inicia sesión</Link>
           </p>
         </form>
       </div>
@@ -164,7 +164,7 @@ export default function RegisterPage() {
 // Sub-componente simple para los requisitos
 function Requirement({ label, met }: { label: string, met: boolean }) {
   return (
-    <div className={`flex items-center gap-1 ${met ? 'text-green-600' : 'text-muted-foreground'}`}>
+    <div className={`flex items-center gap-1 ${met ? 'text-success' : 'text-muted-foreground'}`}>
       {met ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
       {label}
     </div>
