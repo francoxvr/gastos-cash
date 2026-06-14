@@ -13,10 +13,10 @@ import { GoalsManager } from "@/components/goals-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
-import { formatCurrency, exportToCSV, toBaseAmount, type Expense } from "@/lib/expenses"
+import { formatCurrency, exportToCSV, exportMonthlyReportPDF, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -519,6 +519,19 @@ export function ExpenseApp() {
                     <Download className="h-4 w-4 text-accent-foreground" />
                   </div>
                   <span className="font-semibold text-sm">Exportar CSV</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => exportMonthlyReportPDF(expenses, categories, currentMonth, currentYear, getBaseCurrency().symbol)}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Exportar reporte PDF</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>

@@ -79,3 +79,103 @@ export function exportToCSV(expenses: Expense[], baseCode = "ARS") {
   link.click()
   document.body.removeChild(link)
 }
+
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+]
+
+// Genera un PDF con el resumen del mes y el desglose por categoría
+export async function exportMonthlyReportPDF(
+  expenses: Expense[],
+  categories: { id: string; label: string; budget?: number | null }[],
+  month: number,
+  year: number,
+  symbol = "$"
+) {
+  const { jsPDF } = await import("jspdf")
+
+  const periodExpenses = expenses.filter((e) => {
+    const [y, m] = e.date.split("-").map(Number)
+    return (m - 1) === month && y === year
+  })
+
+  const totalGastos = periodExpenses.filter((e) => e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0)
+  const totalIngresos = periodExpenses.filter((e) => e.type === "income").reduce((sum, e) => sum + toBaseAmount(e), 0)
+  const balance = totalIngresos - totalGastos
+
+  const byCategory = categories
+    .map((cat) => ({
+      label: cat.label,
+      amount: periodExpenses.filter((e) => e.type !== "income" && e.category === cat.id).reduce((sum, e) => sum + toBaseAmount(e), 0),
+      budget: cat.budget || null,
+    }))
+    .filter((c) => c.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+
+  const doc = new jsPDF()
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let y = 20
+
+  doc.setFontSize(18)
+  doc.setFont("helvetica", "bold")
+  doc.text("Gastos Cash", 14, y)
+  y += 8
+
+  doc.setFontSize(12)
+  doc.setFont("helvetica", "normal")
+  doc.text(`Reporte de ${MONTH_NAMES[month]} ${year}`, 14, y)
+  y += 12
+
+  doc.setFontSize(11)
+  doc.setFont("helvetica", "bold")
+  doc.text("Resumen", 14, y)
+  y += 7
+  doc.setFont("helvetica", "normal")
+  doc.text(`Gastado: ${formatCurrency(totalGastos, symbol)}`, 14, y)
+  y += 6
+  doc.text(`Ingresos: ${formatCurrency(totalIngresos, symbol)}`, 14, y)
+  y += 6
+  doc.text(`Balance: ${balance >= 0 ? "+" : ""}${formatCurrency(balance, symbol)}`, 14, y)
+  y += 12
+
+  doc.setFontSize(11)
+  doc.setFont("helvetica", "bold")
+  doc.text("Gastos por categoría", 14, y)
+  y += 8
+
+  doc.setFontSize(10)
+  doc.text("Categoría", 14, y)
+  doc.text("Monto", 120, y)
+  doc.text("% del total", pageWidth - 14, y, { align: "right" })
+  y += 2
+  doc.line(14, y, pageWidth - 14, y)
+  y += 6
+
+  doc.setFont("helvetica", "normal")
+  if (byCategory.length === 0) {
+    doc.text("Sin gastos registrados en este período.", 14, y)
+    y += 7
+  }
+  byCategory.forEach((cat) => {
+    if (y > 270) {
+      doc.addPage()
+      y = 20
+    }
+    const pct = totalGastos > 0 ? Math.round((cat.amount / totalGastos) * 100) : 0
+    doc.text(cat.label, 14, y)
+    doc.text(formatCurrency(cat.amount, symbol), 120, y)
+    doc.text(`${pct}%`, pageWidth - 14, y, { align: "right" })
+    y += 7
+    if (cat.budget) {
+      doc.setFontSize(9)
+      doc.setTextColor(130)
+      doc.text(`Presupuesto: ${formatCurrency(cat.budget, symbol)}`, 14, y)
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      y += 7
+    }
+  })
+
+  doc.save(`gastos-cash-${MONTH_NAMES[month].toLowerCase()}-${year}.pdf`)
+}
