@@ -20,6 +20,7 @@ import {
   YAxis,
   ResponsiveContainer,
   Cell,
+  Legend,
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
@@ -108,9 +109,34 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
     return { total, income, balance: income - total, byCategory, change, prevTotal }
   }, [expenses, categories, period, currentMonth, currentYear])
 
+  // Tendencia de los últimos 6 meses: gastos vs ingresos
+  const trend = useMemo(() => {
+    const monthShort = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(currentYear, currentMonth - (5 - i), 1)
+      return { key: `${d.getFullYear()}-${d.getMonth()}`, label: monthShort[d.getMonth()], gastos: 0, ingresos: 0 }
+    })
+    const byKey = new Map(months.map((m) => [m.key, m]))
+
+    expenses.forEach((e) => {
+      const [year, month] = e.date.split('-').map(Number)
+      const entry = byKey.get(`${year}-${month - 1}`)
+      if (!entry) return
+      if (e.type === "income") entry.ingresos += toBaseAmount(e)
+      else entry.gastos += toBaseAmount(e)
+    })
+
+    return months
+  }, [expenses, currentMonth, currentYear])
+
   const chartConfig = Object.fromEntries(
     categories.map((cat) => [cat.id, { label: cat.label, color: cat.color }])
   )
+
+  const trendChartConfig = {
+    gastos: { label: "Gastos", color: "hsl(var(--destructive))" },
+    ingresos: { label: "Ingresos", color: "hsl(var(--success))" },
+  }
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
   const periodLabel = { dia: "hoy", semana: "semana", mes: monthNames[currentMonth], anio: currentYear }
@@ -170,6 +196,34 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
               {stats.balance >= 0 ? "+" : ""}{formatCurrency(stats.balance)}
             </p>
           </div>
+        </div>
+
+        {/* Tendencia mensual: gastos vs ingresos */}
+        <div className="rounded-3xl surface-card p-6">
+          <h2 className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground text-center">Tendencia mensual</h2>
+          <ChartContainer config={trendChartConfig} className="h-[220px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trend} margin={{ left: -20, right: 10 }}>
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "currentColor", fontSize: 10, fontWeight: 700 }}
+                />
+                <YAxis hide />
+                <ChartTooltip
+                  cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                  content={<ChartTooltipContent />}
+                />
+                <Legend
+                  formatter={(value) => trendChartConfig[value as keyof typeof trendChartConfig]?.label || value}
+                  wrapperStyle={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}
+                />
+                <Bar dataKey="gastos" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} barSize={14} />
+                <Bar dataKey="ingresos" fill="hsl(var(--success))" radius={[6, 6, 0, 0]} barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
         </div>
 
         {/* Gráfico de Barras Horizontales */}
