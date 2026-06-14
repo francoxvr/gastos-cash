@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { useExpenses } from "@/context/expense-context"
-import { formatCurrency, formatDate } from "@/lib/expenses"
+import { formatCurrency, formatDate, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
 import { Pencil, Trash2, ChevronDown } from "lucide-react"
 import {
@@ -22,7 +22,7 @@ interface ExpenseListProps {
 }
 
 export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
-  const { expenses, deleteExpense, getCategoryById } = useExpenses()
+  const { expenses, deleteExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
@@ -86,6 +86,8 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
           const cat = getCategoryById(expense.category)
           const isExpanded = expandedId === expense.id
           const isIncome = expense.type === "income"
+          const currency = getCurrencyByCode(expense.currency)
+          const isForeign = !currency.isBase
 
           return (
             <div
@@ -129,8 +131,13 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
                 {/* Importe */}
                 <div className="flex flex-col items-end gap-1 pr-4 shrink-0">
                   <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : isIncome ? "text-success" : "text-foreground"}`}>
-                    {isIncome ? "+" : ""}{formatCurrency(expense.amount)}
+                    {isIncome ? "+" : ""}{formatCurrency(expense.amount, currency.symbol)}
                   </span>
+                  {isForeign && (
+                    <span className={`text-[10px] tabular-nums ${isExpanded ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                      ≈ {formatCurrency(toBaseAmount(expense), getBaseCurrency().symbol)}
+                    </span>
+                  )}
                   <ChevronDown className={`h-3 w-3 transition-transform duration-300
                     ${isExpanded ? "rotate-180 text-primary-foreground" : "text-muted-foreground/30"}`}
                   />
@@ -178,9 +185,9 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
             <AlertDialogTitle>{deleteTarget?.type === "income" ? "¿Eliminar este ingreso?" : "¿Eliminar este gasto?"}</AlertDialogTitle>
             <AlertDialogDescription className="text-balance">
               {deleteTarget?.type === "income" ? (
-                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> del ingreso.</>
+                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount, getCurrencyByCode(deleteTarget.currency).symbol)}</span> del ingreso.</>
               ) : (
-                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.</>
+                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount, getCurrencyByCode(deleteTarget.currency).symbol)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

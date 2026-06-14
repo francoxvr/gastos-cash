@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
-import { formatCurrency } from "@/lib/expenses"
+import { formatCurrency, toBaseAmount } from "@/lib/expenses"
 import { ArrowLeft, Plus, Trash2, X, Wallet, Check } from "lucide-react"
 import {
   AlertDialog,
@@ -61,7 +61,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     return expenses.reduce((acc, e) => {
       const [year, month] = e.date.split('-').map(Number)
       if ((month - 1) === currentMonth && year === currentYear) {
-        acc[e.category] = (acc[e.category] || 0) + e.amount
+        acc[e.category] = (acc[e.category] || 0) + toBaseAmount(e)
       }
       return acc
     }, {} as Record<string, number>)

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useExpenses } from "@/context/expense-context"
-import { formatCurrency } from "@/lib/expenses"
+import { formatCurrency, toBaseAmount } from "@/lib/expenses"
 import {
   ArrowLeft,
   CalendarDays,
@@ -60,15 +60,15 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
       if (period === "semana") return expenseTime >= weekStart && expenseTime <= now.getTime()
       if (period === "mes") return (month - 1) === currentMonth && year === currentYear
       return year === currentYear
-    }).reduce((sum, e) => sum + e.amount, 0)
+    }).reduce((sum, e) => sum + toBaseAmount(e), 0)
 
-    const total = filtered.reduce((sum, e) => sum + e.amount, 0)
+    const total = filtered.reduce((sum, e) => sum + toBaseAmount(e), 0)
 
     // 2. Agrupar por categoría
     const byCategory = categories.map((cat) => {
       const categoryTotal = filtered
         .filter((e) => e.category === cat.id)
-        .reduce((sum, e) => sum + e.amount, 0)
+        .reduce((sum, e) => sum + toBaseAmount(e), 0)
       return {
         category: cat.id,
         label: cat.label,
@@ -102,7 +102,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
       return year === currentYear - 1
     })
 
-    const prevTotal = prevFiltered.reduce((sum, e) => sum + e.amount, 0)
+    const prevTotal = prevFiltered.reduce((sum, e) => sum + toBaseAmount(e), 0)
     const change = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : 0
 
     return { total, income, balance: income - total, byCategory, change, prevTotal }

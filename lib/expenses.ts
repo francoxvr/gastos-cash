@@ -5,14 +5,23 @@ export interface Expense {
   date: string
   description: string
   type?: "expense" | "income"
+  currency?: string
+  exchangeRate?: number
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
+export function formatCurrency(amount: number, symbol = "$"): string {
+  const sign = amount < 0 ? "-" : ""
+  const formatted = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 0,
-  }).format(amount)
+    maximumFractionDigits: 0,
+  }).format(Math.abs(Math.round(amount)))
+  return `${sign}${symbol} ${formatted}`
+}
+
+// Convierte el monto de un gasto a la moneda base usando la tasa de cambio
+// guardada en el momento en que se registró (o 1 si está en la moneda base).
+export function toBaseAmount(expense: Pick<Expense, "amount" | "exchangeRate">): number {
+  return expense.amount * (expense.exchangeRate ?? 1)
 }
 
 export function formatDate(dateString: string): string {
@@ -34,18 +43,18 @@ export function formatDateFull(dateString: string): string {
 }
 
 // --- FUNCIÓN DE DESCARGA OPTIMIZADA ---
-export function exportToCSV(expenses: Expense[]) {
-  const headers = ["Fecha", "Tipo", "Monto", "Categoria", "Descripcion"]
-  const totalGastos = expenses.filter(e => e.type !== "income").reduce((sum, e) => sum + e.amount, 0)
-  const totalIngresos = expenses.filter(e => e.type === "income").reduce((sum, e) => sum + e.amount, 0)
+export function exportToCSV(expenses: Expense[], baseCode = "ARS") {
+  const headers = ["Fecha", "Tipo", "Monto", "Moneda", `Monto en ${baseCode}`, "Categoria", "Descripcion"]
+  const totalGastos = expenses.filter(e => e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0)
+  const totalIngresos = expenses.filter(e => e.type === "income").reduce((sum, e) => sum + toBaseAmount(e), 0)
 
   // Usamos ";" para que Excel detecte las columnas correctamente
-  const rows = expenses.map(e => `${e.date};${e.type === "income" ? "Ingreso" : "Gasto"};$ ${e.amount};${e.category};${e.description}`)
+  const rows = expenses.map(e => `${e.date};${e.type === "income" ? "Ingreso" : "Gasto"};${e.amount};${e.currency || baseCode};${toBaseAmount(e)};${e.category};${e.description}`)
 
-  const footerRow = ` ; ; ; ; `
-  const totalGastosRow = `TOTAL GASTADO;;$ ${totalGastos}; ; `
-  const totalIngresosRow = `TOTAL INGRESOS;;$ ${totalIngresos}; ; `
-  const balanceRow = `BALANCE;;$ ${totalIngresos - totalGastos}; ; `
+  const footerRow = ` ; ; ; ; ; ; `
+  const totalGastosRow = `TOTAL GASTADO;;;;${totalGastos}; ; `
+  const totalIngresosRow = `TOTAL INGRESOS;;;;${totalIngresos}; ; `
+  const balanceRow = `BALANCE;;;;${totalIngresos - totalGastos}; ; `
 
   // IMPORTANTE: sep=; le indica a Excel explícitamente el separador
   const csvContent = [

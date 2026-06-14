@@ -16,6 +16,7 @@ import {
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
 import { DEFAULT_CATEGORIES } from "@/lib/seed-categories"
+import { DEFAULT_CURRENCIES } from "@/lib/seed-currencies"
 
 export interface Expense {
   id: string
@@ -24,6 +25,8 @@ export interface Expense {
   date: string
   description: string
   type?: "expense" | "income"
+  currency?: string
+  exchangeRate?: number
 }
 
 export interface Category {
@@ -43,6 +46,14 @@ export interface RecurringExpense {
   lastGeneratedMonth?: string // "YYYY-MM"
 }
 
+export interface Currency {
+  id: string
+  code: string
+  symbol: string
+  rateToBase: number // 1 unidad de esta moneda = rateToBase unidades de la moneda base
+  isBase: boolean
+}
+
 interface ExpenseContextType {
   expenses: Expense[]
   categories: Category[]
@@ -59,6 +70,12 @@ interface ExpenseContextType {
   deleteRecurring: (id: string) => Promise<void>
   confirmRecurring: (id: string) => Promise<void>
   skipRecurring: (id: string) => Promise<void>
+  currencies: Currency[]
+  getBaseCurrency: () => Currency
+  getCurrencyByCode: (code?: string) => Currency
+  addCurrency: (currency: Omit<Currency, "id" | "isBase">) => Promise<void>
+  updateCurrencyRate: (id: string, rateToBase: number) => Promise<void>
+  deleteCurrency: (id: string) => Promise<void>
   currentMonth: number
   currentYear: number
   setCurrentMonth: (month: number) => void
@@ -74,6 +91,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([])
+  const [currencies, setCurrencies] = useState<Currency[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
@@ -85,15 +103,34 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       const expensesRef = collection(db, 'users', user.uid, 'expenses')
       const categoriesRef = collection(db, 'users', user.uid, 'categories')
       const recurringRef = collection(db, 'users', user.uid, 'recurring')
+      const currenciesRef = collection(db, 'users', user.uid, 'currencies')
 
-      const [expensesSnap, categoriesSnap, recurringSnap] = await Promise.all([
+      const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap] = await Promise.all([
         getDocs(query(expensesRef, orderBy('date', 'desc'))),
         getDocs(query(categoriesRef, orderBy('label', 'asc'))),
         getDocs(recurringRef),
+        getDocs(currenciesRef),
       ])
 
       setExpenses(expensesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
       setRecurringExpenses(recurringSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringExpense)))
+
+      if (currenciesSnap.empty) {
+        const seedMarkerRef = doc(db, 'users', user.uid, 'meta', 'seedCurrencies')
+        await runTransaction(db, async (tx) => {
+          const marker = await tx.get(seedMarkerRef)
+          if (marker.exists()) return
+          tx.set(seedMarkerRef, { seededAt: new Date().toISOString() })
+          for (const cur of DEFAULT_CURRENCIES) {
+            tx.set(doc(currenciesRef), cur)
+          }
+        })
+
+        const seededSnap = await getDocs(currenciesRef)
+        setCurrencies(seededSnap.docs.map(d => ({ id: d.id, ...d.data() } as Currency)))
+      } else {
+        setCurrencies(currenciesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Currency)))
+      }
 
       if (categoriesSnap.empty) {
         // Primer ingreso: sembramos las categorías por defecto.
@@ -129,6 +166,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       setExpenses([])
       setCategories([])
       setRecurringExpenses([])
+      setCurrencies([])
       setLoading(false)
     }
   }, [user, loadData])
@@ -295,11 +333,64 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const getBaseCurrency = (): Currency => {
+    return currencies.find(c => c.isBase) || { id: '', code: 'ARS', symbol: '$', rateToBase: 1, isBase: true }
+  }
+
+  const getCurrencyByCode = (code?: string): Currency => {
+    return currencies.find(c => c.code === code) || getBaseCurrency()
+  }
+
+  const addCurrency = async (currencyData: Omit<Currency, "id" | "isBase">) => {
+    if (!user) return
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'currencies'), { ...currencyData, isBase: false })
+      setCurrencies(prev => [...prev, { id: ref.id, ...currencyData, isBase: false }])
+    } catch {
+      alert("Error al crear la moneda")
+    }
+  }
+
+  const updateCurrencyRate = async (id: string, rateToBase: number) => {
+    if (!user) return
+    const original = [...currencies]
+    setCurrencies(prev => prev.map(c => c.id === id ? { ...c, rateToBase } : c))
+
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'currencies', id), { rateToBase })
+    } catch {
+      setCurrencies(original)
+      alert("No se pudo actualizar la tasa de cambio")
+    }
+  }
+
+  const deleteCurrency = async (id: string) => {
+    if (!user) return
+    const currency = currencies.find(c => c.id === id)
+    if (!currency || currency.isBase) return
+
+    const inUse = expenses.some(e => e.currency === currency.code)
+    if (inUse) {
+      alert("Esta moneda tiene gastos asociados y no puede borrarse.")
+      return
+    }
+
+    const original = [...currencies]
+    setCurrencies(prev => prev.filter(c => c.id !== id))
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'currencies', id))
+    } catch {
+      setCurrencies(original)
+      alert("No se pudo eliminar la moneda")
+    }
+  }
+
   return (
     <ExpenseContext.Provider value={{
       expenses, categories, addExpense, updateExpense, deleteExpense,
       addCategory, updateCategoryBudget, deleteCategory, getCategoryById,
       recurringExpenses, addRecurring, deleteRecurring, confirmRecurring, skipRecurring,
+      currencies, getBaseCurrency, getCurrencyByCode, addCurrency, updateCurrencyRate, deleteCurrency,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
       loading, refreshData: loadData, clearAllExpenses
     }}>

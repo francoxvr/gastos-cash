@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useExpenses } from "@/context/expense-context"
-import { formatCurrency } from "@/lib/expenses"
+import { formatCurrency, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import {
@@ -27,7 +27,7 @@ interface ExpenseCalendarProps {
 }
 
 export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
-  const { expenses, getCategoryById, deleteExpense } = useExpenses()
+  const { expenses, getCategoryById, deleteExpense, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const today = new Date()
 
   // Hoy en formato YYYY-MM-DD local
@@ -80,13 +80,13 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
   }
 
   const selectedExpenses = selectedDate ? (expensesByDate.get(selectedDate) || []) : []
-  const selectedTotal = selectedExpenses.filter(e => e.type !== "income").reduce((sum, e) => sum + e.amount, 0)
+  const selectedTotal = selectedExpenses.filter(e => e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0)
 
   const monthTotal = useMemo(() => {
     return Array.from(expensesByDate.values())
       .flat()
       .filter(e => e.type !== "income")
-      .reduce((sum, e) => sum + e.amount, 0)
+      .reduce((sum, e) => sum + toBaseAmount(e), 0)
   }, [expensesByDate])
 
   return (
@@ -119,7 +119,7 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
 
             const dateStr = getDateStr(day)
             const dayExpenses = (expensesByDate.get(dateStr) || []).filter(e => e.type !== "income")
-            const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0)
+            const dayTotal = dayExpenses.reduce((sum, e) => sum + toBaseAmount(e), 0)
             const isToday = dateStr === todayStr
             const isSelected = dateStr === selectedDate
 
@@ -168,6 +168,8 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
               selectedExpenses.map((expense) => {
                 const cat = getCategoryById(expense.category)
                 const isIncome = expense.type === "income"
+                const currency = getCurrencyByCode(expense.currency)
+                const isForeign = !currency.isBase
                 return (
                   <div key={expense.id} className="flex items-center gap-4 rounded-2xl surface-card p-4">
                     <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${isIncome ? "bg-success/15" : "bg-muted"}`}>
@@ -177,7 +179,12 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
                       <span className="text-sm font-semibold truncate">{expense.description || (isIncome ? "Ingreso" : cat?.label)}</span>
                       <span className="text-xs text-muted-foreground capitalize">{isIncome ? "Ingreso" : cat?.label}</span>
                     </div>
-                    <span className={`font-bold shrink-0 ${isIncome ? "text-success" : ""}`}>{isIncome ? "+" : ""}{formatCurrency(expense.amount)}</span>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className={`font-bold ${isIncome ? "text-success" : ""}`}>{isIncome ? "+" : ""}{formatCurrency(expense.amount, currency.symbol)}</span>
+                      {isForeign && (
+                        <span className="text-[10px] text-muted-foreground">≈ {formatCurrency(toBaseAmount(expense), getBaseCurrency().symbol)}</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => onEdit(expense)}

@@ -14,7 +14,7 @@ interface AddExpenseFormProps {
 }
 
 export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps) {
-  const { addExpense, updateExpense, categories } = useExpenses()
+  const { addExpense, updateExpense, categories, currencies, getBaseCurrency, getCurrencyByCode } = useExpenses()
   const isEditing = !!editingExpense
 
   // Obtiene la fecha actual en formato YYYY-MM-DD local
@@ -28,7 +28,12 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const [category, setCategory] = useState(isEditing ? editingExpense.category : categories[0]?.id || "")
   const [date, setDate] = useState(isEditing ? editingExpense.date : getLocalDate())
   const [description, setDescription] = useState(isEditing ? editingExpense.description : "")
+  const [currencyCode, setCurrencyCode] = useState(
+    isEditing ? (editingExpense.currency || getBaseCurrency().code) : getBaseCurrency().code
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const selectedCurrency = getCurrencyByCode(currencyCode)
 
   const isInvalid = !amount || Number.parseFloat(amount) <= 0
 
@@ -61,6 +66,8 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       date,
       description: description.trim(), // Ahora permitimos que sea opcional sin forzar el nombre de la categoría aquí, ya que el ExpenseList lo maneja
       type,
+      currency: selectedCurrency.code,
+      exchangeRate: selectedCurrency.rateToBase,
     }
 
     if (isEditing && editingExpense) {
@@ -116,7 +123,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
         {/* Input de Monto Gigante */}
         <div className="mt-4 flex flex-col items-center justify-center gap-2">
           <div className="relative flex items-center justify-center">
-            <span className="absolute -left-8 text-4xl font-black opacity-20">$</span>
+            <span className="absolute -left-8 text-4xl font-black opacity-20">{selectedCurrency.symbol}</span>
             <input
               type="text"
               inputMode="decimal"
@@ -130,6 +137,26 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
           </div>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{type === "income" ? "Monto del ingreso" : "Monto del gasto"}</p>
         </div>
+
+        {/* Selector de moneda (solo si hay más de una configurada) */}
+        {currencies.length > 1 && (
+          <div className="flex gap-1 rounded-2xl surface-card p-1">
+            {currencies.map((cur) => (
+              <button
+                key={cur.id}
+                type="button"
+                onClick={() => setCurrencyCode(cur.code)}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all active-press ${
+                  currencyCode === cur.code
+                    ? "gradient-brand text-primary-foreground shadow-sm"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {cur.symbol} {cur.code}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Selector de Categorías (Burbujas modernas) */}
         {type === "expense" && (

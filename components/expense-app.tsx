@@ -7,13 +7,14 @@ import { StatsScreen } from "@/components/stats-screen"
 import { ExpenseCalendar } from "@/components/expense-calendar"
 import { CategoryManager } from "@/components/category-manager"
 import { RecurringManager } from "@/components/recurring-manager"
+import { CurrencyManager } from "@/components/currency-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
-import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
+import { formatCurrency, exportToCSV, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Tab = "home" | "stats" | "calendar" | "more"
-type Overlay = "add" | "edit" | "categories" | "recurring" | null
+type Overlay = "add" | "edit" | "categories" | "recurring" | "currencies" | null
 
 export function ExpenseApp() {
   const [tab, setTab] = useState<Tab>("home")
@@ -37,7 +38,7 @@ export function ExpenseApp() {
   const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
-  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring } = useExpenses()
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency } = useExpenses()
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
@@ -63,19 +64,19 @@ export function ExpenseApp() {
   }, [expenses, timeFilter, currentMonth, currentYear, todayStr])
 
   const filteredTotal = useMemo(
-    () => periodExpenses.filter((e) => e.type !== "income").reduce((sum, e) => sum + e.amount, 0),
+    () => periodExpenses.filter((e) => e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0),
     [periodExpenses]
   )
 
   const periodIncomeTotal = useMemo(
-    () => periodExpenses.filter((e) => e.type === "income").reduce((sum, e) => sum + e.amount, 0),
+    () => periodExpenses.filter((e) => e.type === "income").reduce((sum, e) => sum + toBaseAmount(e), 0),
     [periodExpenses]
   )
 
   const balance = periodIncomeTotal - filteredTotal
 
   const todayTotal = useMemo(
-    () => expenses.filter((e) => e.date === todayStr && e.type !== "income").reduce((sum, e) => sum + e.amount, 0),
+    () => expenses.filter((e) => e.date === todayStr && e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0),
     [expenses, todayStr]
   )
 
@@ -83,7 +84,7 @@ export function ExpenseApp() {
     const totals = new Map<string, number>()
     for (const e of periodExpenses) {
       if (e.type === "income") continue
-      totals.set(e.category, (totals.get(e.category) || 0) + e.amount)
+      totals.set(e.category, (totals.get(e.category) || 0) + toBaseAmount(e))
     }
     let best: { id: string; amount: number } | null = null
     for (const [id, amount] of totals) {
@@ -97,7 +98,7 @@ export function ExpenseApp() {
     for (const e of expenses) {
       const [year, month] = e.date.split("-").map(Number)
       if ((month - 1) === currentMonth && year === currentYear) {
-        spent.set(e.category, (spent.get(e.category) || 0) + e.amount)
+        spent.set(e.category, (spent.get(e.category) || 0) + toBaseAmount(e))
       }
     }
     return categories
@@ -155,6 +156,11 @@ export function ExpenseApp() {
       {overlay === "recurring" && (
         <div className="fixed inset-0 z-50">
           <RecurringManager onClose={closeOverlay} />
+        </div>
+      )}
+      {overlay === "currencies" && (
+        <div className="fixed inset-0 z-50">
+          <CurrencyManager onClose={closeOverlay} />
         </div>
       )}
 
@@ -387,7 +393,20 @@ export function ExpenseApp() {
               </button>
 
               <button
-                onClick={() => exportToCSV(expenses)}
+                onClick={() => setOverlay("currencies")}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <Coins className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Monedas</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => exportToCSV(expenses, getBaseCurrency().code)}
                 className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
