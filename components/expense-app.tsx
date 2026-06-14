@@ -12,7 +12,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -82,6 +82,19 @@ export function ExpenseApp() {
     }
     return best ? { ...best, cat: getCategoryById(best.id) } : null
   }, [periodExpenses, getCategoryById])
+
+  const overBudgetCategories = useMemo(() => {
+    const spent = new Map<string, number>()
+    for (const e of expenses) {
+      const [year, month] = e.date.split("-").map(Number)
+      if ((month - 1) === currentMonth && year === currentYear) {
+        spent.set(e.category, (spent.get(e.category) || 0) + e.amount)
+      }
+    }
+    return categories
+      .filter((cat) => cat.budget && (spent.get(cat.id) || 0) > cat.budget)
+      .map((cat) => ({ cat, spent: spent.get(cat.id) || 0 }))
+  }, [expenses, categories, currentMonth, currentYear])
 
   const MONTH_NAMES = [
     "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -212,6 +225,20 @@ export function ExpenseApp() {
                 )}
               </div>
             </div>
+
+            {/* Aviso de presupuesto superado */}
+            {overBudgetCategories.length > 0 && (
+              <div className="mx-4 flex flex-col gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
+                {overBudgetCategories.map(({ cat, spent }) => (
+                  <div key={cat.id} className="flex items-center gap-3">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+                    <p className="text-xs font-semibold text-destructive">
+                      Superaste el presupuesto de <span className="font-extrabold">{cat.emoji} {cat.label}</span>: {formatCurrency(spent)} / {formatCurrency(cat.budget!)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Expense list */}
             <div className="px-4">
