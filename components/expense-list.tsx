@@ -117,9 +117,9 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   <button
                     onClick={() => { onEdit(expense); setExpandedId(null); }}
                     className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
-                      bg-white/10 hover:bg-white/15 text-primary-foreground"
+                      bg-black/15 hover:bg-black/25 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-lg">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 shadow-lg">
                       <Pencil className="h-4 w-4 text-primary-foreground" />
                     </div>
                     Editar
@@ -131,9 +131,9 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
                   <button
                     onClick={() => setDeleteTarget(expense)}
                     className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
-                      bg-white/10 hover:bg-white/15 text-primary-foreground"
+                      bg-destructive/25 hover:bg-destructive/35 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-lg">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/40 shadow-lg">
                       <Trash2 className="h-4 w-4 text-primary-foreground" />
                     </div>
                     Eliminar
