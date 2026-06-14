@@ -9,13 +9,14 @@ import { CategoryManager } from "@/components/category-manager"
 import { RecurringManager } from "@/components/recurring-manager"
 import { CurrencyManager } from "@/components/currency-manager"
 import { SharedAccountManager } from "@/components/shared-account-manager"
+import { GoalsManager } from "@/components/goals-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Tab = "home" | "stats" | "calendar" | "more"
-type Overlay = "add" | "edit" | "categories" | "recurring" | "currencies" | "shared" | null
+type Overlay = "add" | "edit" | "categories" | "recurring" | "currencies" | "shared" | "goals" | null
 
 export function ExpenseApp() {
   const [tab, setTab] = useState<Tab>("home")
@@ -167,6 +168,11 @@ export function ExpenseApp() {
       {overlay === "shared" && (
         <div className="fixed inset-0 z-50">
           <SharedAccountManager onClose={closeOverlay} />
+        </div>
+      )}
+      {overlay === "goals" && (
+        <div className="fixed inset-0 z-50">
+          <GoalsManager onClose={closeOverlay} />
         </div>
       )}
 
@@ -394,6 +400,19 @@ export function ExpenseApp() {
                     <Repeat className="h-4 w-4 text-accent-foreground" />
                   </div>
                   <span className="font-semibold text-sm">Gastos recurrentes</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => setOverlay("goals")}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <PiggyBank className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Metas de ahorro</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>

@@ -58,6 +58,15 @@ export interface Currency {
   isBase: boolean
 }
 
+export interface SavingsGoal {
+  id: string
+  label: string
+  emoji: string
+  targetAmount: number
+  savedAmount: number
+  targetDate?: string | null // "YYYY-MM-DD"
+}
+
 interface ExpenseContextType {
   expenses: Expense[]
   categories: Category[]
@@ -97,6 +106,11 @@ interface ExpenseContextType {
   removeMember: (uid: string) => Promise<void>
   joinHousehold: (code: string) => Promise<{ success: boolean; error?: string }>
   leaveHousehold: () => Promise<void>
+  goals: SavingsGoal[]
+  addGoal: (goal: Omit<SavingsGoal, "id" | "savedAmount">) => Promise<void>
+  updateGoal: (id: string, updates: { label: string; emoji: string; targetAmount: number; targetDate?: string | null }) => Promise<void>
+  addContribution: (id: string, amount: number) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
@@ -115,6 +129,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [memberEmails, setMemberEmails] = useState<Record<string, string>>({})
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [inviteEnabled, setInviteEnabled] = useState(false)
+  const [goals, setGoals] = useState<SavingsGoal[]>([])
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -171,16 +186,19 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       const categoriesRef = collection(db, 'users', activeHouseholdId, 'categories')
       const recurringRef = collection(db, 'users', activeHouseholdId, 'recurring')
       const currenciesRef = collection(db, 'users', activeHouseholdId, 'currencies')
+      const goalsRef = collection(db, 'users', activeHouseholdId, 'goals')
 
-      const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap] = await Promise.all([
+      const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap, goalsSnap] = await Promise.all([
         getDocs(query(expensesRef, orderBy('date', 'desc'))),
         getDocs(query(categoriesRef, orderBy('label', 'asc'))),
         getDocs(recurringRef),
         getDocs(currenciesRef),
+        getDocs(goalsRef),
       ])
 
       setExpenses(expensesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
       setRecurringExpenses(recurringSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringExpense)))
+      setGoals(goalsSnap.docs.map(d => ({ id: d.id, ...d.data() } as SavingsGoal)))
 
       if (currenciesSnap.empty) {
         const seedMarkerRef = doc(db, 'users', activeHouseholdId, 'meta', 'seedCurrencies')
@@ -239,6 +257,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       setMemberEmails({})
       setInviteCode(null)
       setInviteEnabled(false)
+      setGoals([])
       setLoading(false)
     }
   }, [user, loadData])
@@ -533,6 +552,56 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const addGoal = async (goalData: Omit<SavingsGoal, "id" | "savedAmount">) => {
+    if (!user) return
+    try {
+      const data = { ...goalData, savedAmount: 0 }
+      const ref = await addDoc(collection(db, 'users', householdId, 'goals'), data)
+      setGoals(prev => [...prev, { id: ref.id, ...data }])
+    } catch {
+      alert("Error al crear la meta")
+    }
+  }
+
+  const updateGoal = async (id: string, updates: { label: string; emoji: string; targetAmount: number; targetDate?: string | null }) => {
+    if (!user) return
+    const original = [...goals]
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g))
+    try {
+      await updateDoc(doc(db, 'users', householdId, 'goals', id), updates)
+    } catch {
+      setGoals(original)
+      alert("No se pudo actualizar la meta")
+    }
+  }
+
+  const addContribution = async (id: string, amount: number) => {
+    if (!user) return
+    const goal = goals.find(g => g.id === id)
+    if (!goal) return
+    const savedAmount = Math.max(0, goal.savedAmount + amount)
+    const original = [...goals]
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, savedAmount } : g))
+    try {
+      await updateDoc(doc(db, 'users', householdId, 'goals', id), { savedAmount })
+    } catch {
+      setGoals(original)
+      alert("No se pudo registrar el aporte")
+    }
+  }
+
+  const deleteGoal = async (id: string) => {
+    if (!user) return
+    const original = [...goals]
+    setGoals(prev => prev.filter(g => g.id !== id))
+    try {
+      await deleteDoc(doc(db, 'users', householdId, 'goals', id))
+    } catch {
+      setGoals(original)
+      alert("No se pudo eliminar la meta")
+    }
+  }
+
   return (
     <ExpenseContext.Provider value={{
       expenses, categories, addExpense, updateExpense, deleteExpense,
@@ -543,6 +612,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       loading, refreshData: loadData, clearAllExpenses,
       householdId, isOwner, members, memberEmails, inviteCode, inviteEnabled,
       generateInviteCode, disableSharing, removeMember, joinHousehold, leaveHousehold,
+      goals, addGoal, updateGoal, addContribution, deleteGoal,
     }}>
       {children}
     </ExpenseContext.Provider>
