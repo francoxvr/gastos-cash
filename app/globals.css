@@ -4,81 +4,87 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 25% 11%;
+    --background: 222 32% 97%;
+    --foreground: 224 39% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 25% 11%;
+    --card-foreground: 224 39% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 25% 11%;
+    --popover-foreground: 224 39% 11%;
 
-    --primary: 160 84% 39%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 95%;
-    --secondary-foreground: 222 25% 11%;
+    --secondary: 222 25% 95%;
+    --secondary-foreground: 224 39% 11%;
 
-    --muted: 210 20% 95%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 222 25% 95%;
+    --muted-foreground: 220 14% 47%;
 
-    --accent: 160 84% 94%;
-    --accent-foreground: 160 84% 26%;
+    --accent: 221 83% 95%;
+    --accent-foreground: 221 83% 45%;
 
-    --success: 142 71% 40%;
+    --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 91%;
-    --input: 214 20% 91%;
-    --ring: 160 84% 39%;
+    --border: 220 24% 91%;
+    --input: 220 24% 91%;
+    --ring: 221 83% 53%;
 
-    --chart-1: 160 84% 39%;
-    --chart-2: 217 91% 60%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 158 64% 42%;
     --chart-3: 38 92% 50%;
     --chart-4: 280 65% 60%;
     --chart-5: 0 72% 51%;
+
+    --gradient-from: 221 83% 53%;
+    --gradient-to: 158 64% 42%;
 
     --radius: 1.25rem;
   }
 
   .dark {
-    --background: 222 22% 6%;
-    --foreground: 210 20% 96%;
+    --background: 224 39% 6%;
+    --foreground: 210 40% 97%;
 
-    --card: 222 20% 10%;
-    --card-foreground: 210 20% 96%;
-    --popover: 222 20% 10%;
-    --popover-foreground: 210 20% 96%;
+    --card: 224 32% 10%;
+    --card-foreground: 210 40% 97%;
+    --popover: 224 32% 10%;
+    --popover-foreground: 210 40% 97%;
 
-    --primary: 158 64% 52%;
-    --primary-foreground: 222 25% 9%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 16% 16%;
-    --secondary-foreground: 210 20% 96%;
+    --secondary: 222 28% 16%;
+    --secondary-foreground: 210 40% 97%;
 
-    --muted: 222 16% 14%;
-    --muted-foreground: 215 15% 60%;
+    --muted: 222 28% 14%;
+    --muted-foreground: 215 18% 62%;
 
-    --accent: 158 50% 16%;
-    --accent-foreground: 158 64% 72%;
+    --accent: 217 60% 16%;
+    --accent-foreground: 217 91% 72%;
 
-    --success: 142 65% 50%;
+    --success: 158 64% 50%;
     --success-foreground: 222 25% 9%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 16% 18%;
-    --input: 222 16% 18%;
-    --ring: 158 64% 52%;
+    --border: 222 28% 18%;
+    --input: 222 28% 18%;
+    --ring: 217 91% 60%;
 
-    --chart-1: 158 64% 52%;
-    --chart-2: 217 91% 65%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 158 64% 50%;
     --chart-3: 38 92% 60%;
     --chart-4: 280 65% 68%;
     --chart-5: 0 70% 65%;
+
+    --gradient-from: 217 91% 60%;
+    --gradient-to: 158 64% 50%;
   }
 }
 
@@ -132,4 +138,16 @@
   transform: scale(0.96);
   filter: brightness(0.92);
   transition: all 0.08s ease;
+}
+
+/* ── Brand gradient (azul → verde, estilo fintech) ── */
+.gradient-brand {
+  background-image: linear-gradient(135deg, hsl(var(--gradient-from)), hsl(var(--gradient-to)));
+}
+
+.gradient-brand-text {
+  background-image: linear-gradient(135deg, hsl(var(--gradient-from)), hsl(var(--gradient-to)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

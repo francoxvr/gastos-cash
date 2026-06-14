@@ -116,7 +116,7 @@ export function ExpenseApp() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+          <div className="h-9 w-9 rounded-2xl gradient-brand flex items-center justify-center shadow-lg shadow-primary/25">
             <Wallet className="h-[18px] w-[18px] text-primary-foreground" strokeWidth={2.5} />
           </div>
           <span className="font-extrabold text-base tracking-tight">Gastos Cash</span>
@@ -162,8 +162,9 @@ export function ExpenseApp() {
             </div>
 
             {/* Bento: Balance card */}
-            <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-xl shadow-primary/20">
-              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+            <div className="relative overflow-hidden rounded-3xl gradient-brand p-6 text-primary-foreground shadow-xl shadow-primary/25">
+              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+              <div className="absolute -left-12 bottom-0 h-32 w-32 rounded-full bg-black/10 blur-2xl pointer-events-none" />
               <div className="absolute right-6 bottom-6 h-16 w-16 rounded-full bg-white/10 pointer-events-none" />
               <p className="text-sm font-bold text-primary-foreground/70 mb-2 relative z-10">{periodLabel[timeFilter]}</p>
               <h2 className="text-[2.75rem] font-black tracking-tight leading-none tabular-nums relative z-10">
@@ -332,7 +333,7 @@ export function ExpenseApp() {
         <div className="flex flex-col items-center px-3 -mt-5">
           <button
             onClick={() => setOverlay("add")}
-            className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/35 active-press"
+            className="h-14 w-14 rounded-2xl gradient-brand flex items-center justify-center shadow-xl shadow-primary/35 active-press"
           >
             <Plus className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
           </button>

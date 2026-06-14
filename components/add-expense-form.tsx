@@ -122,7 +122,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
                   onClick={() => setCategory(cat.id)}
                   className={`flex flex-col items-center gap-2 rounded-3xl py-5 transition-all duration-300 active-press ${
                     isSelected
-                    ? "bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-105"
+                    ? "gradient-brand text-primary-foreground shadow-xl shadow-primary/20 scale-105"
                     : "bg-card text-muted-foreground opacity-60"
                   }`}
                 >
@@ -171,7 +171,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             className={`flex h-20 w-full items-center justify-center gap-3 rounded-[2.5rem] text-lg font-black uppercase tracking-[0.2em] transition-all active-press shadow-2xl ${
               isSubmitting
               ? "bg-success text-success-foreground"
-              : "bg-primary text-primary-foreground shadow-primary/30"
+              : "gradient-brand text-primary-foreground shadow-primary/30"
             } disabled:opacity-30 disabled:grayscale`}
           >
             {isSubmitting ? (

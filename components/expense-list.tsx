@@ -65,7 +65,7 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
             <div
               key={expense.id}
               className={`group relative overflow-hidden rounded-3xl transition-all duration-300 animate-entrance shadow-sm
-                ${isExpanded ? "bg-primary shadow-xl shadow-primary/20" : "bg-card"}`}
+                ${isExpanded ? "gradient-brand shadow-xl shadow-primary/20" : "bg-card"}`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <button
