@@ -6,13 +6,14 @@ import { ExpenseList } from "@/components/expense-list"
 import { StatsScreen } from "@/components/stats-screen"
 import { ExpenseCalendar } from "@/components/expense-calendar"
 import { CategoryManager } from "@/components/category-manager"
+import { RecurringManager } from "@/components/recurring-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -26,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Tab = "home" | "stats" | "calendar" | "more"
-type Overlay = "add" | "edit" | "categories" | null
+type Overlay = "add" | "edit" | "categories" | "recurring" | null
 
 export function ExpenseApp() {
   const [tab, setTab] = useState<Tab>("home")
@@ -36,7 +37,7 @@ export function ExpenseApp() {
   const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
-  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear } = useExpenses()
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring } = useExpenses()
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
@@ -104,6 +105,12 @@ export function ExpenseApp() {
       .map((cat) => ({ cat, spent: spent.get(cat.id) || 0 }))
   }, [expenses, categories, currentMonth, currentYear])
 
+  const pendingRecurring = useMemo(() => {
+    const now = new Date()
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    return recurringExpenses.filter((r) => r.dayOfMonth <= now.getDate() && r.lastGeneratedMonth !== monthKey)
+  }, [recurringExpenses])
+
   const MONTH_NAMES = [
     "Enero","Febrero","Marzo","Abril","Mayo","Junio",
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
@@ -143,6 +150,11 @@ export function ExpenseApp() {
       {overlay === "categories" && (
         <div className="fixed inset-0 z-50">
           <CategoryManager onClose={closeOverlay} />
+        </div>
+      )}
+      {overlay === "recurring" && (
+        <div className="fixed inset-0 z-50">
+          <RecurringManager onClose={closeOverlay} />
         </div>
       )}
 
@@ -242,6 +254,42 @@ export function ExpenseApp() {
               </div>
             </div>
 
+            {/* Gastos recurrentes pendientes */}
+            {pendingRecurring.length > 0 && (
+              <div className="mx-4 flex flex-col gap-2">
+                {pendingRecurring.map((rec) => {
+                  const cat = getCategoryById(rec.category)
+                  return (
+                    <div key={rec.id} className="flex items-center gap-3 rounded-2xl surface-card p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent">
+                        <Repeat className="h-4 w-4 text-accent-foreground" />
+                      </div>
+                      <div className="flex flex-1 flex-col overflow-hidden">
+                        <span className="text-sm font-bold truncate">
+                          {rec.description || cat?.label || "Gasto recurrente"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatCurrency(rec.amount)} · {cat?.emoji} {cat?.label}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => skipRecurring(rec.id)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted active-press"
+                      >
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => confirmRecurring(rec.id)}
+                        className="shrink-0 rounded-xl gradient-brand px-3 py-2 text-xs font-bold text-primary-foreground active-press"
+                      >
+                        Registrar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Aviso de presupuesto superado */}
             {overBudgetCategories.length > 0 && (
               <div className="mx-4 flex flex-col gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
@@ -321,6 +369,19 @@ export function ExpenseApp() {
                     <Tag className="h-4 w-4 text-accent-foreground" />
                   </div>
                   <span className="font-semibold text-sm">Categorías</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => setOverlay("recurring")}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <Repeat className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Gastos recurrentes</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>

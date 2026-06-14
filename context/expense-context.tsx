@@ -34,6 +34,15 @@ export interface Category {
   budget?: number | null
 }
 
+export interface RecurringExpense {
+  id: string
+  amount: number
+  category: string
+  description: string
+  dayOfMonth: number
+  lastGeneratedMonth?: string // "YYYY-MM"
+}
+
 interface ExpenseContextType {
   expenses: Expense[]
   categories: Category[]
@@ -45,6 +54,11 @@ interface ExpenseContextType {
   updateCategoryBudget: (id: string, budget: number | null) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
   getCategoryById: (id: string) => Category | undefined
+  recurringExpenses: RecurringExpense[]
+  addRecurring: (recurring: Omit<RecurringExpense, "id" | "lastGeneratedMonth">) => Promise<void>
+  deleteRecurring: (id: string) => Promise<void>
+  confirmRecurring: (id: string) => Promise<void>
+  skipRecurring: (id: string) => Promise<void>
   currentMonth: number
   currentYear: number
   setCurrentMonth: (month: number) => void
@@ -59,6 +73,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
@@ -69,13 +84,16 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     try {
       const expensesRef = collection(db, 'users', user.uid, 'expenses')
       const categoriesRef = collection(db, 'users', user.uid, 'categories')
+      const recurringRef = collection(db, 'users', user.uid, 'recurring')
 
-      const [expensesSnap, categoriesSnap] = await Promise.all([
+      const [expensesSnap, categoriesSnap, recurringSnap] = await Promise.all([
         getDocs(query(expensesRef, orderBy('date', 'desc'))),
         getDocs(query(categoriesRef, orderBy('label', 'asc'))),
+        getDocs(recurringRef),
       ])
 
       setExpenses(expensesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
+      setRecurringExpenses(recurringSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringExpense)))
 
       if (categoriesSnap.empty) {
         // Primer ingreso: sembramos las categorías por defecto.
@@ -110,6 +128,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     } else {
       setExpenses([])
       setCategories([])
+      setRecurringExpenses([])
       setLoading(false)
     }
   }, [user, loadData])
@@ -215,10 +234,72 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const addRecurring = async (recurringData: Omit<RecurringExpense, "id" | "lastGeneratedMonth">) => {
+    if (!user) return
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'recurring'), recurringData)
+      setRecurringExpenses(prev => [...prev, { id: ref.id, ...recurringData }])
+    } catch {
+      alert("Error al crear el gasto recurrente")
+    }
+  }
+
+  const deleteRecurring = async (id: string) => {
+    if (!user) return
+    const original = [...recurringExpenses]
+    setRecurringExpenses(prev => prev.filter(r => r.id !== id))
+
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'recurring', id))
+    } catch {
+      setRecurringExpenses(original)
+      alert("No se pudo eliminar el gasto recurrente")
+    }
+  }
+
+  const getCurrentMonthKey = () => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  const confirmRecurring = async (id: string) => {
+    if (!user) return
+    const recurring = recurringExpenses.find(r => r.id === id)
+    if (!recurring) return
+
+    const monthKey = getCurrentMonthKey()
+    await addExpense({
+      amount: recurring.amount,
+      category: recurring.category,
+      date: new Date().toISOString().split('T')[0],
+      description: recurring.description,
+      type: "expense",
+    })
+
+    setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastGeneratedMonth: monthKey } : r))
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'recurring', id), { lastGeneratedMonth: monthKey })
+    } catch {
+      // El gasto ya se registró; reintentará marcarse como pendiente en la próxima carga
+    }
+  }
+
+  const skipRecurring = async (id: string) => {
+    if (!user) return
+    const monthKey = getCurrentMonthKey()
+    setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastGeneratedMonth: monthKey } : r))
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'recurring', id), { lastGeneratedMonth: monthKey })
+    } catch {
+      loadData()
+    }
+  }
+
   return (
     <ExpenseContext.Provider value={{
       expenses, categories, addExpense, updateExpense, deleteExpense,
       addCategory, updateCategoryBudget, deleteCategory, getCategoryById,
+      recurringExpenses, addRecurring, deleteRecurring, confirmRecurring, skipRecurring,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
       loading, refreshData: loadData, clearAllExpenses
     }}>
