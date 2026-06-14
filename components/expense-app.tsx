@@ -16,7 +16,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -113,6 +113,58 @@ export function ExpenseApp() {
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     return recurringExpenses.filter((r) => r.dayOfMonth <= now.getDate() && r.lastGeneratedMonth !== monthKey)
   }, [recurringExpenses])
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default")
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    setNotificationPermission(Notification.permission)
+    setNotificationsEnabled(localStorage.getItem("notificationsEnabled") === "true" && Notification.permission === "granted")
+  }, [])
+
+  const toggleNotifications = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    if (!notificationsEnabled) {
+      const permission = await Notification.requestPermission()
+      setNotificationPermission(permission)
+      if (permission === "granted") {
+        localStorage.setItem("notificationsEnabled", "true")
+        setNotificationsEnabled(true)
+      }
+    } else {
+      localStorage.setItem("notificationsEnabled", "false")
+      setNotificationsEnabled(false)
+    }
+  }
+
+  // Avisa una vez por día sobre recurrentes pendientes y presupuestos superados
+  useEffect(() => {
+    if (!notificationsEnabled || !mounted) return
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    if (Notification.permission !== "granted") return
+
+    const today = new Date().toISOString().split("T")[0]
+    if (localStorage.getItem("lastNotificationCheck") === today) return
+    localStorage.setItem("lastNotificationCheck", today)
+
+    pendingRecurring.forEach((rec) => {
+      const cat = getCategoryById(rec.category)
+      new Notification("Gasto recurrente pendiente", {
+        body: `${cat?.emoji || "💸"} ${rec.description}: ${formatCurrency(rec.amount)}`,
+        icon: "/icon-192.png",
+        tag: `recurring-${rec.id}-${today}`,
+      })
+    })
+
+    overBudgetCategories.forEach(({ cat, spent }) => {
+      new Notification("Presupuesto superado", {
+        body: `${cat.emoji} ${cat.label}: ${formatCurrency(spent)} / ${formatCurrency(cat.budget!)}`,
+        icon: "/icon-192.png",
+        tag: `budget-${cat.id}-${today}`,
+      })
+    })
+  }, [notificationsEnabled, mounted, pendingRecurring, overBudgetCategories, getCategoryById])
 
   const MONTH_NAMES = [
     "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -441,6 +493,21 @@ export function ExpenseApp() {
                   <span className="font-semibold text-sm">Cuenta compartida</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={toggleNotifications}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    {notificationsEnabled ? <Bell className="h-4 w-4 text-accent-foreground" /> : <BellOff className="h-4 w-4 text-accent-foreground" />}
+                  </div>
+                  <span className="font-semibold text-sm">Notificaciones</span>
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {notificationsEnabled ? "Activadas" : notificationPermission === "denied" ? "Bloqueadas" : "Desactivadas"}
+                </span>
               </button>
 
               <button
