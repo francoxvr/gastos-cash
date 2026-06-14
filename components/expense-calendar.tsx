@@ -103,7 +103,7 @@ export function ExpenseCalendar() {
             // Clases de intensidad basadas en el gasto
             let intensity = "hover:bg-muted text-foreground"
             if (dayExpenses.length > 0) {
-              if (dayTotal > 5000) intensity = "bg-primary text-primary-foreground"
+              if (dayTotal > 5000) intensity = "gradient-brand text-primary-foreground"
               else if (dayTotal > 2000) intensity = "bg-primary/60 text-primary-foreground"
               else intensity = "bg-primary/20 text-primary font-bold"
             }
@@ -114,13 +114,13 @@ export function ExpenseCalendar() {
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                 className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl text-sm transition-all active-press
                   ${isSelected ? "ring-2 ring-primary ring-offset-4 ring-offset-background z-10 scale-110 shadow-lg" : ""}
-                  ${isToday && !dayExpenses.length ? "border-2 border-primary/30 font-black" : ""}
+                  ${isToday && !dayExpenses.length ? "gradient-ring font-black" : ""}
                   ${intensity}
                 `}
               >
-                <span className={isSelected ? "font-bold" : ""}>{day}</span>
+                <span className={`relative z-10 ${isSelected ? "font-bold" : ""}`}>{day}</span>
                 {dayExpenses.length > 0 && !isSelected && (
-                  <span className="absolute bottom-2 h-1 w-1 rounded-full bg-current opacity-50" />
+                  <span className="absolute z-10 bottom-2 h-1 w-1 rounded-full bg-current opacity-50" />
                 )}
               </button>
             )
