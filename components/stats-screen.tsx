@@ -106,7 +106,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background animate-entrance">
       <header className="sticky top-0 z-20 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
-        <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-card active-press">
+        <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-2xl surface-card active-press">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-xl font-extrabold">Estadísticas</h1>
@@ -114,7 +114,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-2 pb-20">
         {/* Selector de periodo estilizado */}
-        <div className="flex gap-1.5 rounded-2xl bg-card p-1.5 shadow-sm">
+        <div className="flex gap-1.5 rounded-2xl surface-card p-1.5">
           {[
             { key: "dia", label: "Día", icon: CalendarDays },
             { key: "semana", label: "Sem.", icon: CalendarClock },
@@ -136,13 +136,13 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
         {/* Resumen numérico */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-3xl bg-card p-5 shadow-sm">
+          <div className="rounded-3xl surface-card p-5">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Gastado {periodLabel[period]}</span>
             <p className="mt-2 text-2xl font-black tracking-tighter">{formatCurrency(stats.total)}</p>
           </div>
-          <div className="rounded-3xl bg-card p-5 shadow-sm">
+          <div className="rounded-3xl surface-card p-5">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">vs {prevPeriodLabel[period]}</span>
-            <div className={`mt-2 flex items-center gap-1 font-black text-2xl tracking-tighter ${stats.change >= 0 ? "text-destructive" : "text-primary"}`}>
+            <div className={`mt-2 flex items-center gap-1 font-black text-2xl tracking-tighter ${stats.change >= 0 ? "text-destructive" : "text-success"}`}>
               {stats.change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               {Math.abs(stats.change)}%
             </div>
@@ -150,7 +150,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
         </div>
 
         {/* Gráfico de Barras Horizontales */}
-        <div className="rounded-3xl bg-card p-6 shadow-sm">
+        <div className="rounded-3xl surface-card p-6">
           <h2 className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground text-center">Distribución por Categoría</h2>
           
           {stats.total > 0 ? (
@@ -190,7 +190,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
         <div className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Ranking de gastos</h2>
           {stats.byCategory.map((cat) => (
-            <div key={cat.category} className="group rounded-3xl bg-card p-4 shadow-sm transition-all">
+            <div key={cat.category} className="group rounded-3xl surface-card p-4 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: `${cat.fill}15` }}>

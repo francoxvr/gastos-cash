@@ -124,13 +124,13 @@ export function ExpenseApp() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={toggleTheme}
-            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-card text-muted-foreground active-press transition-colors"
+            className="h-10 w-10 flex items-center justify-center rounded-2xl surface-card text-muted-foreground active-press transition-colors"
           >
             {theme === "light" ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
           </button>
           <button
             onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
-            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-card text-muted-foreground active-press transition-colors"
+            className="h-10 w-10 flex items-center justify-center rounded-2xl surface-card text-muted-foreground active-press transition-colors"
           >
             <LogOut className="h-[18px] w-[18px]" />
           </button>
@@ -142,47 +142,50 @@ export function ExpenseApp() {
 
         {/* HOME */}
         {tab === "home" && (
-          <div className="flex flex-col gap-4 px-4 pb-6 animate-fade-in">
+          <div className="flex flex-col gap-4 pb-6 animate-fade-in">
 
-            {/* Time filter pills */}
-            <div className="flex gap-1.5 bg-card rounded-2xl p-1.5 shadow-sm">
-              {(["dia","semana","mes","anio"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setTimeFilter(f)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all active-press ${
-                    timeFilter === f
-                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {periodLabel[f]}
-                </button>
-              ))}
+            {/* Hero: degradado con filtro de tiempo + balance */}
+            <div className="relative mx-4 overflow-hidden rounded-[2rem] gradient-mesh px-6 pt-5 pb-12 text-primary-foreground shadow-xl shadow-primary/25">
+              <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+              <div className="absolute -left-14 -bottom-14 h-44 w-44 rounded-full bg-black/10 blur-3xl pointer-events-none" />
+
+              {/* Time filter pills */}
+              <div className="relative z-10 flex gap-1 rounded-2xl bg-white/15 backdrop-blur-md p-1">
+                {(["dia","semana","mes","anio"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setTimeFilter(f)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all active-press ${
+                      timeFilter === f
+                        ? "bg-white text-foreground shadow-sm"
+                        : "text-primary-foreground/70"
+                    }`}
+                  >
+                    {periodLabel[f]}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative z-10 mt-7">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground/60">
+                  Total gastado · {periodLabel[timeFilter]}
+                </p>
+                <h2 className="mt-1 text-[2.75rem] font-black tracking-tight leading-none tabular-nums">
+                  {formatCurrency(filteredTotal)}
+                </h2>
+              </div>
             </div>
 
-            {/* Bento: Balance card */}
-            <div className="relative overflow-hidden rounded-3xl gradient-brand p-6 text-primary-foreground shadow-xl shadow-primary/25">
-              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-              <div className="absolute -left-12 bottom-0 h-32 w-32 rounded-full bg-black/10 blur-2xl pointer-events-none" />
-              <div className="absolute right-6 bottom-6 h-16 w-16 rounded-full bg-white/10 pointer-events-none" />
-              <p className="text-sm font-bold text-primary-foreground/70 mb-2 relative z-10">{periodLabel[timeFilter]}</p>
-              <h2 className="text-[2.75rem] font-black tracking-tight leading-none tabular-nums relative z-10">
-                {formatCurrency(filteredTotal)}
-              </h2>
-              <p className="text-xs text-primary-foreground/60 mt-2 font-semibold relative z-10">total gastado</p>
-            </div>
-
-            {/* Bento: secondary cards */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-card p-4 shadow-sm flex flex-col gap-1">
+            {/* Chips flotantes superpuestos */}
+            <div className="relative z-10 -mt-7 grid grid-cols-2 gap-3 px-4">
+              <div className="surface-card rounded-2xl p-4 shadow-lg flex flex-col gap-1">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">Hoy</span>
                 </div>
                 <span className="text-xl font-black tabular-nums tracking-tight">{formatCurrency(todayTotal)}</span>
               </div>
-              <div className="rounded-2xl bg-card p-4 shadow-sm flex flex-col gap-1 overflow-hidden">
+              <div className="surface-card rounded-2xl p-4 shadow-lg flex flex-col gap-1 overflow-hidden">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Tag className="h-3.5 w-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">Top categoría</span>
@@ -199,7 +202,7 @@ export function ExpenseApp() {
             </div>
 
             {/* Expense list */}
-            <div>
+            <div className="px-4">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 mt-1">
                 Movimientos
               </p>
@@ -229,7 +232,7 @@ export function ExpenseApp() {
             <p className="text-xl font-extrabold mb-1">Ajustes</p>
 
             {/* Main options */}
-            <div className="rounded-2xl overflow-hidden bg-card divide-y divide-border/50 shadow-sm">
+            <div className="rounded-2xl overflow-hidden surface-card divide-y divide-border/50">
 
               <button
                 onClick={() => setOverlay("categories")}
@@ -278,7 +281,7 @@ export function ExpenseApp() {
             </div>
 
             {/* Sign out */}
-            <div className="rounded-2xl overflow-hidden bg-card shadow-sm">
+            <div className="rounded-2xl overflow-hidden surface-card">
               <button
                 onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
                 className="flex items-center gap-3 w-full px-4 py-3.5 active-press hover:bg-destructive/5 transition-colors"
@@ -291,7 +294,7 @@ export function ExpenseApp() {
             </div>
 
             {/* Danger zone */}
-            <div className="rounded-2xl overflow-hidden bg-card shadow-sm">
+            <div className="rounded-2xl overflow-hidden surface-card">
               <button
                 onClick={async () => {
                   if (confirm("⚠️ ¿Eliminar TODOS los gastos? Esta acción no se puede deshacer.")) {
@@ -311,7 +314,7 @@ export function ExpenseApp() {
       </main>
 
       {/* ── Bottom Navigation ── */}
-      <nav className="flex items-end justify-around px-2 pt-2 pb-5 bg-card/95 backdrop-blur-xl border-t border-border/50 shrink-0">
+      <nav className="relative mx-3 mb-3 flex items-center justify-around gap-1 rounded-[1.75rem] surface-card backdrop-blur-xl px-2 py-2 shadow-lg shrink-0">
         {(["home","stats"] as const).map((key) => {
           const Icon = key === "home" ? Home : BarChart3
           const label = key === "home" ? "Inicio" : "Stats"
@@ -319,7 +322,7 @@ export function ExpenseApp() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-1 rounded-xl transition-all active-press ${
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-2xl transition-all active-press ${
                 tab === key ? "text-primary" : "text-muted-foreground/50"
               }`}
             >
@@ -330,15 +333,12 @@ export function ExpenseApp() {
         })}
 
         {/* Center add button */}
-        <div className="flex flex-col items-center px-3 -mt-5">
-          <button
-            onClick={() => setOverlay("add")}
-            className="h-14 w-14 rounded-2xl gradient-brand flex items-center justify-center shadow-xl shadow-primary/35 active-press"
-          >
-            <Plus className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
-          </button>
-          <span className="text-[10px] font-bold text-muted-foreground/50 mt-1">Agregar</span>
-        </div>
+        <button
+          onClick={() => setOverlay("add")}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl gradient-brand shadow-lg shadow-primary/35 active-press"
+        >
+          <Plus className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
+        </button>
 
         {(["calendar","more"] as const).map((key) => {
           const Icon = key === "calendar" ? CalendarDays : MoreHorizontal
@@ -347,7 +347,7 @@ export function ExpenseApp() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-1 rounded-xl transition-all active-press ${
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-2xl transition-all active-press ${
                 tab === key ? "text-primary" : "text-muted-foreground/50"
               }`}
             >

@@ -105,7 +105,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card active-press"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl surface-card active-press"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -125,7 +125,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
             return (
               <div
                 key={cat.id}
-                className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-sm animate-entrance"
+                className="flex flex-col gap-3 rounded-2xl surface-card p-4 animate-entrance"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="flex items-center gap-4">
@@ -206,7 +206,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
         {/* Formulario para añadir */}
         {showAddForm && (
-          <div className="animate-scale-in flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-lg mt-4">
+          <div className="animate-scale-in flex flex-col gap-4 rounded-3xl surface-card p-5 shadow-lg mt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">Nueva categoría</h2>
               <button onClick={() => setShowAddForm(false)} className="p-1.5 hover:bg-muted rounded-full active-press">

@@ -69,7 +69,7 @@ export function ExpenseCalendar() {
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
       {/* Navegación de Mes */}
-      <div className="flex items-center justify-between rounded-3xl bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-3xl surface-card p-4">
         <button onClick={() => navigateMonth(-1)} className="p-2 rounded-full hover:bg-muted active-press">
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -83,7 +83,7 @@ export function ExpenseCalendar() {
       </div>
 
       {/* Grid del Calendario */}
-      <div className="rounded-3xl bg-card p-5 shadow-sm">
+      <div className="rounded-3xl surface-card p-5">
         <div className="mb-4 grid grid-cols-7 text-center">
           {dayNames.map((day) => (
             <span key={day} className="text-[10px] font-bold uppercase text-muted-foreground/60">{day}</span>
@@ -145,7 +145,7 @@ export function ExpenseCalendar() {
               selectedExpenses.map((expense) => {
                 const cat = getCategoryById(expense.category)
                 return (
-                  <div key={expense.id} className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-sm">
+                  <div key={expense.id} className="flex items-center gap-4 rounded-2xl surface-card p-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-xl">
                       {cat?.emoji || "💸"}
                     </div>

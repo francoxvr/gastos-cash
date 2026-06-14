@@ -151,3 +151,17 @@
   background-clip: text;
   color: transparent;
 }
+
+/* ── Hero con degradado tipo "mesh" ── */
+.gradient-mesh {
+  background-image:
+    radial-gradient(circle at 15% 15%, hsl(var(--gradient-from) / 0.95), transparent 55%),
+    radial-gradient(circle at 90% 0%, hsl(var(--gradient-to) / 0.9), transparent 60%),
+    linear-gradient(160deg, hsl(var(--gradient-from)), hsl(var(--gradient-to)));
+}
+
+/* ── Superficie con borde sutil, en vez de tarjeta plana con sombra ── */
+.surface-card {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 0.6);
+}

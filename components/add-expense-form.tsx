@@ -79,7 +79,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       <header className="sticky top-0 z-10 flex items-center justify-between bg-background/80 px-4 py-6 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card text-foreground transition-all active-press shadow-sm"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl surface-card text-foreground transition-all active-press"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -123,7 +123,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
                   className={`flex flex-col items-center gap-2 rounded-3xl py-5 transition-all duration-300 active-press ${
                     isSelected
                     ? "gradient-brand text-primary-foreground shadow-xl shadow-primary/20 scale-105"
-                    : "bg-card text-muted-foreground opacity-60"
+                    : "surface-card text-muted-foreground opacity-60"
                   }`}
                 >
                   <span className="text-3xl">{cat.emoji}</span>
@@ -145,7 +145,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               placeholder="¿En qué lo gastaste? (Opcional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="h-16 w-full rounded-3xl bg-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
+              className="h-16 w-full rounded-3xl surface-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
             />
           </div>
 
@@ -158,7 +158,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="h-16 w-full rounded-3xl bg-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
+              className="h-16 w-full rounded-3xl surface-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
             />
           </div>
         </div>
