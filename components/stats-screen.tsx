@@ -39,8 +39,9 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
     const todayTarget = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).getTime()
 
-    // 1. Filtrar gastos del periodo actual
+    // 1. Filtrar gastos del periodo actual (sin contar ingresos)
     const filtered = expenses.filter((expense) => {
+      if (expense.type === "income") return false
       const [year, month, day] = expense.date.split('-').map(Number)
       const expenseTime = new Date(year, month - 1, day).getTime()
 
@@ -49,6 +50,17 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
       if (period === "mes") return (month - 1) === currentMonth && year === currentYear
       return year === currentYear
     })
+
+    const income = expenses.filter((expense) => {
+      if (expense.type !== "income") return false
+      const [year, month, day] = expense.date.split('-').map(Number)
+      const expenseTime = new Date(year, month - 1, day).getTime()
+
+      if (period === "dia") return expenseTime === todayTarget
+      if (period === "semana") return expenseTime >= weekStart && expenseTime <= now.getTime()
+      if (period === "mes") return (month - 1) === currentMonth && year === currentYear
+      return year === currentYear
+    }).reduce((sum, e) => sum + e.amount, 0)
 
     const total = filtered.reduce((sum, e) => sum + e.amount, 0)
 
@@ -70,6 +82,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
 
     // 3. Calcular periodo anterior para el % de cambio
     const prevFiltered = expenses.filter((expense) => {
+      if (expense.type === "income") return false
       const [year, month, day] = expense.date.split('-').map(Number)
       const expenseTime = new Date(year, month - 1, day).getTime()
 
@@ -92,7 +105,7 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
     const prevTotal = prevFiltered.reduce((sum, e) => sum + e.amount, 0)
     const change = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : 0
 
-    return { total, byCategory, change, prevTotal }
+    return { total, income, balance: income - total, byCategory, change, prevTotal }
   }, [expenses, categories, period, currentMonth, currentYear])
 
   const chartConfig = Object.fromEntries(
@@ -146,6 +159,16 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
               {stats.change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               {Math.abs(stats.change)}%
             </div>
+          </div>
+          <div className="rounded-3xl surface-card p-5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ingresos {periodLabel[period]}</span>
+            <p className="mt-2 text-2xl font-black tracking-tighter text-success">+{formatCurrency(stats.income)}</p>
+          </div>
+          <div className="rounded-3xl surface-card p-5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Balance {periodLabel[period]}</span>
+            <p className={`mt-2 text-2xl font-black tracking-tighter ${stats.balance >= 0 ? "text-success" : "text-destructive"}`}>
+              {stats.balance >= 0 ? "+" : ""}{formatCurrency(stats.balance)}
+            </p>
           </div>
         </div>
 

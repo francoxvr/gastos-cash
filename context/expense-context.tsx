@@ -23,6 +23,7 @@ export interface Expense {
   category: string
   date: string
   description: string
+  type?: "expense" | "income"
 }
 
 export interface Category {

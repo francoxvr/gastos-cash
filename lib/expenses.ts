@@ -4,6 +4,7 @@ export interface Expense {
   category: string
   date: string
   description: string
+  type?: "expense" | "income"
 }
 
 export function formatCurrency(amount: number): string {
@@ -34,22 +35,27 @@ export function formatDateFull(dateString: string): string {
 
 // --- FUNCIÓN DE DESCARGA OPTIMIZADA ---
 export function exportToCSV(expenses: Expense[]) {
-  const headers = ["Fecha", "Monto", "Categoria"]
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const headers = ["Fecha", "Tipo", "Monto", "Categoria", "Descripcion"]
+  const totalGastos = expenses.filter(e => e.type !== "income").reduce((sum, e) => sum + e.amount, 0)
+  const totalIngresos = expenses.filter(e => e.type === "income").reduce((sum, e) => sum + e.amount, 0)
 
   // Usamos ";" para que Excel detecte las columnas correctamente
-  const rows = expenses.map(e => `${e.date};$ ${e.amount};${e.category}`)
-  
-  const footerRow = ` ; ; `
-  const totalRow = `TOTAL GASTADO;$ ${totalAmount}; `
+  const rows = expenses.map(e => `${e.date};${e.type === "income" ? "Ingreso" : "Gasto"};$ ${e.amount};${e.category};${e.description}`)
+
+  const footerRow = ` ; ; ; ; `
+  const totalGastosRow = `TOTAL GASTADO;;$ ${totalGastos}; ; `
+  const totalIngresosRow = `TOTAL INGRESOS;;$ ${totalIngresos}; ; `
+  const balanceRow = `BALANCE;;$ ${totalIngresos - totalGastos}; ; `
 
   // IMPORTANTE: sep=; le indica a Excel explícitamente el separador
   const csvContent = [
-    "sep=;", 
-    headers.join(";"), 
-    ...rows, 
-    footerRow, 
-    totalRow
+    "sep=;",
+    headers.join(";"),
+    ...rows,
+    footerRow,
+    totalGastosRow,
+    totalIngresosRow,
+    balanceRow,
   ].join("\n")
   
   // Agregamos BOM (\ufeff) para asegurar compatibilidad con acentos en Windows

@@ -32,7 +32,8 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
         const cat = getCategoryById(e.category)
         return (
           e.description?.toLowerCase().includes(query) ||
-          cat?.label.toLowerCase().includes(query)
+          cat?.label.toLowerCase().includes(query) ||
+          (e.type === "income" && "ingreso".includes(query))
         )
       })
     : expenses
@@ -84,12 +85,13 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
         {sortedExpenses.slice(0, 30).map((expense, index) => {
           const cat = getCategoryById(expense.category)
           const isExpanded = expandedId === expense.id
-          
+          const isIncome = expense.type === "income"
+
           return (
             <div
               key={expense.id}
               className={`group relative overflow-hidden rounded-3xl transition-all duration-300 animate-entrance
-                ${isExpanded ? "gradient-brand shadow-xl shadow-primary/20" : "surface-card"}`}
+                ${isExpanded ? (isIncome ? "bg-success shadow-xl shadow-success/20" : "gradient-brand shadow-xl shadow-primary/20") : "surface-card"}`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <button
@@ -99,16 +101,16 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
                 {/* Icono / Emoji */}
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition-colors
-                    ${isExpanded ? "bg-white/20" : "bg-muted"}`}
-                  style={!isExpanded && cat?.color ? { backgroundColor: `${cat.color}15`, color: cat.color } : undefined}
+                    ${isExpanded ? "bg-white/20" : isIncome ? "bg-success/15 text-success" : "bg-muted"}`}
+                  style={!isExpanded && !isIncome && cat?.color ? { backgroundColor: `${cat.color}15`, color: cat.color } : undefined}
                 >
-                  {cat?.emoji || "❓"}
+                  {isIncome ? "💰" : (cat?.emoji || "❓")}
                 </div>
 
                 {/* Info */}
                 <div className="flex flex-1 flex-col overflow-hidden">
                   <span className={`font-bold truncate ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
-                    {cat?.label || "Sin categoría"}
+                    {isIncome ? "Ingreso" : (cat?.label || "Sin categoría")}
                   </span>
                   <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider overflow-hidden
                     ${isExpanded ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
@@ -126,11 +128,11 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
 
                 {/* Importe */}
                 <div className="flex flex-col items-end gap-1 pr-4 shrink-0">
-                  <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : "text-foreground"}`}>
-                    {formatCurrency(expense.amount)}
+                  <span className={`text-lg font-black tabular-nums ${isExpanded ? "text-primary-foreground" : isIncome ? "text-success" : "text-foreground"}`}>
+                    {isIncome ? "+" : ""}{formatCurrency(expense.amount)}
                   </span>
-                  <ChevronDown className={`h-3 w-3 transition-transform duration-300 
-                    ${isExpanded ? "rotate-180 text-primary-foreground" : "text-muted-foreground/30"}`} 
+                  <ChevronDown className={`h-3 w-3 transition-transform duration-300
+                    ${isExpanded ? "rotate-180 text-primary-foreground" : "text-muted-foreground/30"}`}
                   />
                 </div>
               </button>
@@ -173,9 +175,13 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent className="rounded-3xl w-[90%]">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este gasto?</AlertDialogTitle>
+            <AlertDialogTitle>{deleteTarget?.type === "income" ? "¿Eliminar este ingreso?" : "¿Eliminar este gasto?"}</AlertDialogTitle>
             <AlertDialogDescription className="text-balance">
-              Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.
+              {deleteTarget?.type === "income" ? (
+                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> del ingreso.</>
+              ) : (
+                <>Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-4">

@@ -80,11 +80,12 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
   }
 
   const selectedExpenses = selectedDate ? (expensesByDate.get(selectedDate) || []) : []
-  const selectedTotal = selectedExpenses.reduce((sum, e) => sum + e.amount, 0)
+  const selectedTotal = selectedExpenses.filter(e => e.type !== "income").reduce((sum, e) => sum + e.amount, 0)
 
   const monthTotal = useMemo(() => {
     return Array.from(expensesByDate.values())
       .flat()
+      .filter(e => e.type !== "income")
       .reduce((sum, e) => sum + e.amount, 0)
   }, [expensesByDate])
 
@@ -117,7 +118,7 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
             if (day === null) return <div key={`empty-${index}`} />
 
             const dateStr = getDateStr(day)
-            const dayExpenses = expensesByDate.get(dateStr) || []
+            const dayExpenses = (expensesByDate.get(dateStr) || []).filter(e => e.type !== "income")
             const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0)
             const isToday = dateStr === todayStr
             const isSelected = dateStr === selectedDate
@@ -166,16 +167,17 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
             {selectedExpenses.length > 0 ? (
               selectedExpenses.map((expense) => {
                 const cat = getCategoryById(expense.category)
+                const isIncome = expense.type === "income"
                 return (
                   <div key={expense.id} className="flex items-center gap-4 rounded-2xl surface-card p-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-xl">
-                      {cat?.emoji || "💸"}
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${isIncome ? "bg-success/15" : "bg-muted"}`}>
+                      {isIncome ? "💰" : (cat?.emoji || "💸")}
                     </div>
                     <div className="flex flex-1 flex-col overflow-hidden">
-                      <span className="text-sm font-semibold truncate">{expense.description || cat?.label}</span>
-                      <span className="text-xs text-muted-foreground capitalize">{cat?.label}</span>
+                      <span className="text-sm font-semibold truncate">{expense.description || (isIncome ? "Ingreso" : cat?.label)}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{isIncome ? "Ingreso" : cat?.label}</span>
                     </div>
-                    <span className="font-bold shrink-0">{formatCurrency(expense.amount)}</span>
+                    <span className={`font-bold shrink-0 ${isIncome ? "text-success" : ""}`}>{isIncome ? "+" : ""}{formatCurrency(expense.amount)}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => onEdit(expense)}

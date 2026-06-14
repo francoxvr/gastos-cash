@@ -23,6 +23,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
     return now.toISOString().split('T')[0]
   }
 
+  const [type, setType] = useState<"expense" | "income">(isEditing ? (editingExpense.type || "expense") : "expense")
   const [amount, setAmount] = useState(isEditing ? editingExpense.amount.toString() : "")
   const [category, setCategory] = useState(isEditing ? editingExpense.category : categories[0]?.id || "")
   const [date, setDate] = useState(isEditing ? editingExpense.date : getLocalDate())
@@ -56,9 +57,10 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
 
     const expenseData = {
       amount: Number.parseFloat(amount),
-      category,
+      category: type === "income" ? "" : category,
       date,
-      description: description.trim() // Ahora permitimos que sea opcional sin forzar el nombre de la categoría aquí, ya que el ExpenseList lo maneja
+      description: description.trim(), // Ahora permitimos que sea opcional sin forzar el nombre de la categoría aquí, ya que el ExpenseList lo maneja
+      type,
     }
 
     if (isEditing && editingExpense) {
@@ -84,13 +86,33 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-lg font-black uppercase tracking-widest">
-          {isEditing ? "Editar" : "Nuevo Gasto"}
+          {isEditing ? "Editar" : type === "income" ? "Nuevo Ingreso" : "Nuevo Gasto"}
         </h1>
         <div className="w-12" /> {/* Espaciador para centrar el título */}
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-8 px-6 pb-10">
-        
+
+        {/* Selector Gasto / Ingreso */}
+        <div className="flex gap-1 rounded-2xl surface-card p-1">
+          {(["expense", "income"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setType(t)}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all active-press ${
+                type === t
+                  ? t === "income"
+                    ? "bg-success text-success-foreground shadow-sm"
+                    : "gradient-brand text-primary-foreground shadow-sm"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {t === "income" ? "Ingreso" : "Gasto"}
+            </button>
+          ))}
+        </div>
+
         {/* Input de Monto Gigante */}
         <div className="mt-4 flex flex-col items-center justify-center gap-2">
           <div className="relative flex items-center justify-center">
@@ -106,10 +128,11 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               required
             />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Monto del gasto</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{type === "income" ? "Monto del ingreso" : "Monto del gasto"}</p>
         </div>
 
         {/* Selector de Categorías (Burbujas modernas) */}
+        {type === "expense" && (
         <div className="flex flex-col gap-4">
           <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Seleccionar Categoría</Label>
           <div className="grid grid-cols-3 gap-3">
@@ -133,6 +156,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             })}
           </div>
         </div>
+        )}
 
         {/* Otros Detalles */}
         <div className="space-y-4">
@@ -142,7 +166,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               <Type className="h-5 w-5" />
             </div>
             <input
-              placeholder="¿En qué lo gastaste? (Opcional)"
+              placeholder={type === "income" ? "¿De dónde vino? (Opcional)" : "¿En qué lo gastaste? (Opcional)"}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="h-16 w-full rounded-3xl surface-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
@@ -171,6 +195,8 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             className={`flex h-20 w-full items-center justify-center gap-3 rounded-[2.5rem] text-lg font-black uppercase tracking-[0.2em] transition-all active-press shadow-2xl ${
               isSubmitting
               ? "bg-success text-success-foreground"
+              : type === "income"
+              ? "bg-success text-success-foreground shadow-success/30"
               : "gradient-brand text-primary-foreground shadow-primary/30"
             } disabled:opacity-30 disabled:grayscale`}
           >
@@ -180,7 +206,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               </>
             ) : (
               <>
-                {isEditing ? "Actualizar" : "Confirmar Gasto"}
+                {isEditing ? "Actualizar" : type === "income" ? "Confirmar Ingreso" : "Confirmar Gasto"}
               </>
             )}
           </button>

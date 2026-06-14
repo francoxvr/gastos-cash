@@ -62,18 +62,26 @@ export function ExpenseApp() {
   }, [expenses, timeFilter, currentMonth, currentYear, todayStr])
 
   const filteredTotal = useMemo(
-    () => periodExpenses.reduce((sum, e) => sum + e.amount, 0),
+    () => periodExpenses.filter((e) => e.type !== "income").reduce((sum, e) => sum + e.amount, 0),
     [periodExpenses]
   )
 
+  const periodIncomeTotal = useMemo(
+    () => periodExpenses.filter((e) => e.type === "income").reduce((sum, e) => sum + e.amount, 0),
+    [periodExpenses]
+  )
+
+  const balance = periodIncomeTotal - filteredTotal
+
   const todayTotal = useMemo(
-    () => expenses.filter((e) => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
+    () => expenses.filter((e) => e.date === todayStr && e.type !== "income").reduce((sum, e) => sum + e.amount, 0),
     [expenses, todayStr]
   )
 
   const topCategory = useMemo(() => {
     const totals = new Map<string, number>()
     for (const e of periodExpenses) {
+      if (e.type === "income") continue
       totals.set(e.category, (totals.get(e.category) || 0) + e.amount)
     }
     let best: { id: string; amount: number } | null = null
@@ -198,6 +206,14 @@ export function ExpenseApp() {
                 <h2 className="mt-1 text-[2.75rem] font-black tracking-tight leading-none tabular-nums">
                   {formatCurrency(filteredTotal)}
                 </h2>
+                <div className="mt-3 flex items-center gap-2 text-xs font-bold">
+                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-primary-foreground/80">
+                    Ingresos +{formatCurrency(periodIncomeTotal)}
+                  </span>
+                  <span className={`rounded-full px-2.5 py-1 ${balance >= 0 ? "bg-success/30 text-white" : "bg-destructive/40 text-white"}`}>
+                    Balance {balance >= 0 ? "+" : ""}{formatCurrency(balance)}
+                  </span>
+                </div>
               </div>
             </div>
 
