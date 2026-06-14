@@ -4,7 +4,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
+  setDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -12,6 +14,8 @@ import {
   runTransaction,
   query,
   orderBy,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
@@ -82,6 +86,17 @@ interface ExpenseContextType {
   setCurrentYear: (year: number) => void
   loading: boolean
   refreshData: () => Promise<void>
+  householdId: string
+  isOwner: boolean
+  members: string[]
+  memberEmails: Record<string, string>
+  inviteCode: string | null
+  inviteEnabled: boolean
+  generateInviteCode: () => Promise<void>
+  disableSharing: () => Promise<void>
+  removeMember: (uid: string) => Promise<void>
+  joinHousehold: (code: string) => Promise<{ success: boolean; error?: string }>
+  leaveHousehold: () => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
@@ -95,15 +110,67 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
+  const [householdId, setHouseholdId] = useState<string>("")
+  const [members, setMembers] = useState<string[]>([])
+  const [memberEmails, setMemberEmails] = useState<Record<string, string>>({})
+  const [inviteCode, setInviteCode] = useState<string | null>(null)
+  const [inviteEnabled, setInviteEnabled] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
-      const expensesRef = collection(db, 'users', user.uid, 'expenses')
-      const categoriesRef = collection(db, 'users', user.uid, 'categories')
-      const recurringRef = collection(db, 'users', user.uid, 'recurring')
-      const currenciesRef = collection(db, 'users', user.uid, 'currencies')
+      // Resolvemos el perfil del usuario para saber a qué "hogar" pertenece
+      // (por defecto, el suyo propio: householdId === uid).
+      const profileRef = doc(db, 'users', user.uid)
+      const profileSnap = await getDoc(profileRef)
+      let profile = profileSnap.data() as
+        | { householdId?: string; members?: string[]; inviteCode?: string | null; inviteEnabled?: boolean; email?: string }
+        | undefined
+
+      if (!profileSnap.exists()) {
+        profile = { householdId: user.uid, members: [user.uid], inviteCode: null, inviteEnabled: false, email: user.email || '' }
+        await setDoc(profileRef, profile)
+      } else if (profile?.email !== user.email) {
+        await setDoc(profileRef, { email: user.email || '' }, { merge: true })
+      }
+
+      const activeHouseholdId = profile?.householdId || user.uid
+      setHouseholdId(activeHouseholdId)
+
+      // Si pertenecemos al "hogar" de otro usuario, leemos los datos de
+      // compartición desde el perfil del dueño del hogar.
+      let householdMembers = profile?.members || [user.uid]
+      let householdInviteCode = profile?.inviteCode ?? null
+      let householdInviteEnabled = profile?.inviteEnabled ?? false
+      if (activeHouseholdId !== user.uid) {
+        const ownerSnap = await getDoc(doc(db, 'users', activeHouseholdId))
+        const ownerData = ownerSnap.data() as { members?: string[]; inviteCode?: string | null; inviteEnabled?: boolean } | undefined
+        householdMembers = ownerData?.members || [activeHouseholdId]
+        householdInviteCode = ownerData?.inviteCode ?? null
+        householdInviteEnabled = ownerData?.inviteEnabled ?? false
+      }
+      setMembers(householdMembers)
+      setInviteCode(householdInviteCode)
+      setInviteEnabled(householdInviteEnabled)
+
+      if (householdMembers.length > 1) {
+        const emailEntries = await Promise.all(
+          householdMembers.map(async (uid) => {
+            if (uid === user.uid) return [uid, user.email || ''] as const
+            const snap = await getDoc(doc(db, 'users', uid))
+            return [uid, (snap.data()?.email as string) || ''] as const
+          })
+        )
+        setMemberEmails(Object.fromEntries(emailEntries))
+      } else {
+        setMemberEmails({ [user.uid]: user.email || '' })
+      }
+
+      const expensesRef = collection(db, 'users', activeHouseholdId, 'expenses')
+      const categoriesRef = collection(db, 'users', activeHouseholdId, 'categories')
+      const recurringRef = collection(db, 'users', activeHouseholdId, 'recurring')
+      const currenciesRef = collection(db, 'users', activeHouseholdId, 'currencies')
 
       const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap] = await Promise.all([
         getDocs(query(expensesRef, orderBy('date', 'desc'))),
@@ -116,7 +183,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       setRecurringExpenses(recurringSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringExpense)))
 
       if (currenciesSnap.empty) {
-        const seedMarkerRef = doc(db, 'users', user.uid, 'meta', 'seedCurrencies')
+        const seedMarkerRef = doc(db, 'users', activeHouseholdId, 'meta', 'seedCurrencies')
         await runTransaction(db, async (tx) => {
           const marker = await tx.get(seedMarkerRef)
           if (marker.exists()) return
@@ -137,7 +204,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
         // Se usa una transacción con un documento centinela para que,
         // si esto se dispara más de una vez (p. ej. doble efecto en
         // modo desarrollo), solo una siembra se aplique.
-        const seedMarkerRef = doc(db, 'users', user.uid, 'meta', 'seed')
+        const seedMarkerRef = doc(db, 'users', activeHouseholdId, 'meta', 'seed')
         await runTransaction(db, async (tx) => {
           const marker = await tx.get(seedMarkerRef)
           if (marker.exists()) return
@@ -167,6 +234,11 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       setCategories([])
       setRecurringExpenses([])
       setCurrencies([])
+      setHouseholdId("")
+      setMembers([])
+      setMemberEmails({})
+      setInviteCode(null)
+      setInviteEnabled(false)
       setLoading(false)
     }
   }, [user, loadData])
@@ -182,7 +254,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setExpenses(prev => [newExpense, ...prev])
 
     try {
-      const ref = await addDoc(collection(db, 'users', user.uid, 'expenses'), expenseData)
+      const ref = await addDoc(collection(db, 'users', householdId, 'expenses'), expenseData)
       setExpenses(prev => prev.map(e => e.id === tempId ? { ...expenseData, id: ref.id } : e))
     } catch (error: any) {
       setExpenses(prev => prev.filter(e => e.id !== tempId))
@@ -196,7 +268,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setExpenses(prev => prev.map(e => e.id === id ? { ...expenseData, id } : e))
 
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'expenses', id), expenseData)
+      await updateDoc(doc(db, 'users', householdId, 'expenses', id), expenseData)
     } catch {
       setExpenses(originalExpenses)
       alert("Error al actualizar")
@@ -209,7 +281,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setExpenses(prev => prev.filter(e => e.id !== id))
 
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'expenses', id))
+      await deleteDoc(doc(db, 'users', householdId, 'expenses', id))
     } catch {
       setExpenses(originalExpenses)
       alert("No se pudo eliminar")
@@ -222,7 +294,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setExpenses([])
 
     try {
-      const expensesRef = collection(db, 'users', user.uid, 'expenses')
+      const expensesRef = collection(db, 'users', householdId, 'expenses')
       const snap = await getDocs(expensesRef)
       const batch = writeBatch(db)
       snap.docs.forEach(d => batch.delete(d.ref))
@@ -236,7 +308,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const addCategory = async (catData: Omit<Category, "id">) => {
     if (!user) return
     try {
-      const ref = await addDoc(collection(db, 'users', user.uid, 'categories'), catData)
+      const ref = await addDoc(collection(db, 'users', householdId, 'categories'), catData)
       setCategories(prev => [...prev, { id: ref.id, ...catData }])
     } catch {
       alert("Error al crear categoría")
@@ -249,7 +321,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, budget } : c))
 
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'categories', id), { budget })
+      await updateDoc(doc(db, 'users', householdId, 'categories', id), { budget })
     } catch {
       setCategories(original)
       alert("No se pudo actualizar el presupuesto")
@@ -266,7 +338,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
 
     setCategories(prev => prev.filter(c => c.id !== id))
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'categories', id))
+      await deleteDoc(doc(db, 'users', householdId, 'categories', id))
     } catch {
       loadData() // Re-sincronizar si falla
     }
@@ -275,7 +347,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const addRecurring = async (recurringData: Omit<RecurringExpense, "id" | "lastGeneratedMonth">) => {
     if (!user) return
     try {
-      const ref = await addDoc(collection(db, 'users', user.uid, 'recurring'), recurringData)
+      const ref = await addDoc(collection(db, 'users', householdId, 'recurring'), recurringData)
       setRecurringExpenses(prev => [...prev, { id: ref.id, ...recurringData }])
     } catch {
       alert("Error al crear el gasto recurrente")
@@ -288,7 +360,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setRecurringExpenses(prev => prev.filter(r => r.id !== id))
 
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'recurring', id))
+      await deleteDoc(doc(db, 'users', householdId, 'recurring', id))
     } catch {
       setRecurringExpenses(original)
       alert("No se pudo eliminar el gasto recurrente")
@@ -316,7 +388,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
 
     setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastGeneratedMonth: monthKey } : r))
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'recurring', id), { lastGeneratedMonth: monthKey })
+      await updateDoc(doc(db, 'users', householdId, 'recurring', id), { lastGeneratedMonth: monthKey })
     } catch {
       // El gasto ya se registró; reintentará marcarse como pendiente en la próxima carga
     }
@@ -327,7 +399,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     const monthKey = getCurrentMonthKey()
     setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastGeneratedMonth: monthKey } : r))
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'recurring', id), { lastGeneratedMonth: monthKey })
+      await updateDoc(doc(db, 'users', householdId, 'recurring', id), { lastGeneratedMonth: monthKey })
     } catch {
       loadData()
     }
@@ -344,7 +416,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const addCurrency = async (currencyData: Omit<Currency, "id" | "isBase">) => {
     if (!user) return
     try {
-      const ref = await addDoc(collection(db, 'users', user.uid, 'currencies'), { ...currencyData, isBase: false })
+      const ref = await addDoc(collection(db, 'users', householdId, 'currencies'), { ...currencyData, isBase: false })
       setCurrencies(prev => [...prev, { id: ref.id, ...currencyData, isBase: false }])
     } catch {
       alert("Error al crear la moneda")
@@ -357,7 +429,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     setCurrencies(prev => prev.map(c => c.id === id ? { ...c, rateToBase } : c))
 
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'currencies', id), { rateToBase })
+      await updateDoc(doc(db, 'users', householdId, 'currencies', id), { rateToBase })
     } catch {
       setCurrencies(original)
       alert("No se pudo actualizar la tasa de cambio")
@@ -378,10 +450,86 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     const original = [...currencies]
     setCurrencies(prev => prev.filter(c => c.id !== id))
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'currencies', id))
+      await deleteDoc(doc(db, 'users', householdId, 'currencies', id))
     } catch {
       setCurrencies(original)
       alert("No se pudo eliminar la moneda")
+    }
+  }
+
+  const isOwner = !!user && householdId === user.uid
+
+  const generateInviteCode = async () => {
+    if (!user || !isOwner) return
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+    try {
+      await setDoc(doc(db, 'invites', code), { householdId: user.uid })
+      await updateDoc(doc(db, 'users', user.uid), { inviteCode: code, inviteEnabled: true })
+      setInviteCode(code)
+      setInviteEnabled(true)
+    } catch {
+      alert("No se pudo generar el código de invitación")
+    }
+  }
+
+  const disableSharing = async () => {
+    if (!user || !isOwner) return
+    try {
+      if (inviteCode) {
+        await deleteDoc(doc(db, 'invites', inviteCode))
+      }
+      await updateDoc(doc(db, 'users', user.uid), { inviteEnabled: false })
+      setInviteEnabled(false)
+    } catch {
+      alert("No se pudo desactivar la compartición")
+    }
+  }
+
+  const removeMember = async (uid: string) => {
+    if (!user || !isOwner || uid === user.uid) return
+    const original = members
+    setMembers(prev => prev.filter(m => m !== uid))
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { members: arrayRemove(uid) })
+    } catch {
+      setMembers(original)
+      alert("No se pudo quitar al integrante")
+    }
+  }
+
+  const joinHousehold = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: "No autenticado" }
+    const trimmed = code.trim().toUpperCase()
+    if (!trimmed) return { success: false, error: "Ingresá un código" }
+    try {
+      const inviteSnap = await getDoc(doc(db, 'invites', trimmed))
+      if (!inviteSnap.exists()) return { success: false, error: "Código inválido" }
+      const targetHouseholdId = inviteSnap.data().householdId as string
+      if (targetHouseholdId === user.uid) return { success: false, error: "No podés unirte a tu propia cuenta" }
+
+      const ownerSnap = await getDoc(doc(db, 'users', targetHouseholdId))
+      if (!ownerSnap.exists() || !ownerSnap.data()?.inviteEnabled) {
+        return { success: false, error: "La compartición no está activa" }
+      }
+
+      await updateDoc(doc(db, 'users', targetHouseholdId), { members: arrayUnion(user.uid) })
+      await updateDoc(doc(db, 'users', user.uid), { householdId: targetHouseholdId })
+      await loadData()
+      return { success: true }
+    } catch {
+      return { success: false, error: "No se pudo unir a la cuenta compartida" }
+    }
+  }
+
+  const leaveHousehold = async () => {
+    if (!user || isOwner) return
+    try {
+      await updateDoc(doc(db, 'users', householdId), { members: arrayRemove(user.uid) })
+      await updateDoc(doc(db, 'users', user.uid), { householdId: user.uid })
+      await loadData()
+    } catch {
+      alert("No se pudo salir de la cuenta compartida")
     }
   }
 
@@ -392,7 +540,9 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       recurringExpenses, addRecurring, deleteRecurring, confirmRecurring, skipRecurring,
       currencies, getBaseCurrency, getCurrencyByCode, addCurrency, updateCurrencyRate, deleteCurrency,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
-      loading, refreshData: loadData, clearAllExpenses
+      loading, refreshData: loadData, clearAllExpenses,
+      householdId, isOwner, members, memberEmails, inviteCode, inviteEnabled,
+      generateInviteCode, disableSharing, removeMember, joinHousehold, leaveHousehold,
     }}>
       {children}
     </ExpenseContext.Provider>
