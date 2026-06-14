@@ -246,7 +246,7 @@ export function ExpenseApp() {
         {tab === "calendar" && (
           <div className="px-4 pt-2 pb-6 animate-fade-in">
             <p className="text-xl font-extrabold mb-4">Calendario</p>
-            <ExpenseCalendar />
+            <ExpenseCalendar onEdit={openEdit} />
           </div>
         )}
 

@@ -4,7 +4,17 @@ import { useMemo, useState } from "react"
 import { useExpenses } from "@/context/expense-context"
 import { formatCurrency } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const dayNames = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
 const monthNames = [
@@ -12,8 +22,12 @@ const monthNames = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
 
-export function ExpenseCalendar() {
-  const { expenses, getCategoryById } = useExpenses()
+interface ExpenseCalendarProps {
+  onEdit: (expense: Expense) => void
+}
+
+export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
+  const { expenses, getCategoryById, deleteExpense } = useExpenses()
   const today = new Date()
 
   // Hoy en formato YYYY-MM-DD local
@@ -22,6 +36,14 @@ export function ExpenseCalendar() {
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
+
+  const handleDelete = async () => {
+    if (deleteTarget) {
+      await deleteExpense(deleteTarget.id)
+      setDeleteTarget(null)
+    }
+  }
 
   const expensesByDate = useMemo(() => {
     const map = new Map<string, Expense[]>()
@@ -149,11 +171,25 @@ export function ExpenseCalendar() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-xl">
                       {cat?.emoji || "💸"}
                     </div>
-                    <div className="flex flex-1 flex-col">
-                      <span className="text-sm font-semibold">{expense.description || cat?.label}</span>
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <span className="text-sm font-semibold truncate">{expense.description || cat?.label}</span>
                       <span className="text-xs text-muted-foreground capitalize">{cat?.label}</span>
                     </div>
-                    <span className="font-bold">{formatCurrency(expense.amount)}</span>
+                    <span className="font-bold shrink-0">{formatCurrency(expense.amount)}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => onEdit(expense)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted active-press"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(expense)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-destructive/10 active-press"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    </div>
                   </div>
                 )
               })
@@ -165,6 +201,24 @@ export function ExpenseCalendar() {
           </div>
         </div>
       )}
+
+      {/* Confirmación de Borrado */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-3xl w-[90%]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este gasto?</AlertDialogTitle>
+            <AlertDialogDescription className="text-balance">
+              Se borrará el registro de <span className="font-bold text-foreground">{deleteTarget && formatCurrency(deleteTarget.amount)}</span> de la categoría <span className="font-bold text-foreground">{deleteTarget && (getCategoryById(deleteTarget.category)?.label || "Sin categoría")}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 rounded-2xl mt-0">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-2xl">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
