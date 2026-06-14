@@ -13,13 +13,14 @@ import Link from "next/link"
 export default function LoginPage() {
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle, resetPassword } = useAuth()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [resetSent, setResetSent] = useState(false)
 
   // Autenticación con Email y Contraseña
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +37,25 @@ export default function LoginPage() {
           ? "Email o contraseña incorrectos"
           : "Error al iniciar sesión. Intenta nuevamente."
       )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Envía un email para restablecer la contraseña
+  const handleForgotPassword = async () => {
+    setError("")
+    setResetSent(false)
+    if (!email) {
+      setError("Ingresa tu email arriba para recuperar la contraseña")
+      return
+    }
+    setLoading(true)
+    try {
+      await resetPassword(email)
+      setResetSent(true)
+    } catch {
+      setError("No se pudo enviar el email de recuperación")
     } finally {
       setLoading(false)
     }
@@ -124,7 +144,23 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="text-xs font-bold text-primary hover:underline disabled:opacity-50"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
           </div>
+
+          {resetSent && (
+            <div className="rounded-2xl bg-success/10 p-3 text-sm text-success animate-fade-in">
+              Te enviamos un email para restablecer tu contraseña.
+            </div>
+          )}
 
           {error && (
             <div className="rounded-2xl bg-destructive/10 p-3 text-sm text-destructive animate-fade-in">

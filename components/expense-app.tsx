@@ -14,6 +14,16 @@ import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
   Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles,
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type Tab = "home" | "stats" | "calendar" | "more"
 type Overlay = "add" | "edit" | "categories" | null
@@ -27,7 +37,8 @@ export function ExpenseApp() {
 
   const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear } = useExpenses()
   const { theme, toggleTheme } = useTheme()
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
+  const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -129,7 +140,7 @@ export function ExpenseApp() {
             {theme === "light" ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
           </button>
           <button
-            onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
+            onClick={() => setConfirmAction("signOut")}
             className="h-10 w-10 flex items-center justify-center rounded-2xl surface-card text-muted-foreground active-press transition-colors"
           >
             <LogOut className="h-[18px] w-[18px]" />
@@ -231,6 +242,17 @@ export function ExpenseApp() {
           <div className="flex flex-col px-4 pt-2 pb-6 gap-3 animate-fade-in">
             <p className="text-xl font-extrabold mb-1">Ajustes</p>
 
+            {/* User info */}
+            <div className="flex items-center gap-3 rounded-2xl surface-card p-4">
+              <div className="h-11 w-11 shrink-0 rounded-2xl gradient-brand flex items-center justify-center text-lg font-black text-primary-foreground">
+                {(user?.email?.[0] || "?").toUpperCase()}
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-bold truncate">{user?.email}</span>
+                <span className="text-xs text-muted-foreground">Cuenta activa</span>
+              </div>
+            </div>
+
             {/* Main options */}
             <div className="rounded-2xl overflow-hidden surface-card divide-y divide-border/50">
 
@@ -283,7 +305,7 @@ export function ExpenseApp() {
             {/* Sign out */}
             <div className="rounded-2xl overflow-hidden surface-card">
               <button
-                onClick={async () => { if (confirm("¿Cerrar sesión?")) await signOut() }}
+                onClick={() => setConfirmAction("signOut")}
                 className="flex items-center gap-3 w-full px-4 py-3.5 active-press hover:bg-destructive/5 transition-colors"
               >
                 <div className="h-9 w-9 rounded-2xl bg-destructive/10 flex items-center justify-center">
@@ -296,11 +318,7 @@ export function ExpenseApp() {
             {/* Danger zone */}
             <div className="rounded-2xl overflow-hidden surface-card">
               <button
-                onClick={async () => {
-                  if (confirm("⚠️ ¿Eliminar TODOS los gastos? Esta acción no se puede deshacer.")) {
-                    await clearAllExpenses()
-                  }
-                }}
+                onClick={() => setConfirmAction("clearAll")}
                 className="flex items-center gap-3 w-full px-4 py-3.5 active-press hover:bg-destructive/5 transition-colors"
               >
                 <div className="h-9 w-9 rounded-2xl bg-destructive/10 flex items-center justify-center">
@@ -312,6 +330,35 @@ export function ExpenseApp() {
           </div>
         )}
       </main>
+
+      {/* ── Diálogo de confirmación ── */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "signOut" ? "¿Cerrar sesión?" : "¿Eliminar todos los gastos?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "signOut"
+                ? "Vas a tener que volver a iniciar sesión para acceder a tu cuenta."
+                : "Esta acción no se puede deshacer. Se eliminarán todos tus gastos registrados."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (confirmAction === "signOut") await signOut()
+                else if (confirmAction === "clearAll") await clearAllExpenses()
+                setConfirmAction(null)
+              }}
+            >
+              {confirmAction === "signOut" ? "Cerrar sesión" : "Eliminar todo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Bottom Navigation ── */}
       <nav className="relative mx-3 mb-3 flex items-center justify-around gap-1 rounded-[1.75rem] surface-card backdrop-blur-xl px-2 py-2 shadow-lg shrink-0">

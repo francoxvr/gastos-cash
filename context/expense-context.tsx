@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   runTransaction,
   query,
   orderBy,
@@ -157,6 +158,23 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const clearAllExpenses = async () => {
+    if (!user) return
+    const original = [...expenses]
+    setExpenses([])
+
+    try {
+      const expensesRef = collection(db, 'users', user.uid, 'expenses')
+      const snap = await getDocs(expensesRef)
+      const batch = writeBatch(db)
+      snap.docs.forEach(d => batch.delete(d.ref))
+      await batch.commit()
+    } catch {
+      setExpenses(original)
+      alert("No se pudieron eliminar los gastos")
+    }
+  }
+
   const addCategory = async (catData: Omit<Category, "id">) => {
     if (!user) return
     try {
@@ -201,7 +219,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       expenses, categories, addExpense, updateExpense, deleteExpense,
       addCategory, updateCategoryBudget, deleteCategory, getCategoryById,
       currentMonth, currentYear, setCurrentMonth, setCurrentYear,
-      loading, refreshData: loadData, clearAllExpenses: async () => {}
+      loading, refreshData: loadData, clearAllExpenses
     }}>
       {children}
     </ExpenseContext.Provider>
