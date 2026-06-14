@@ -157,7 +157,7 @@ export function ExpenseApp() {
                     onClick={() => setTimeFilter(f)}
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all active-press ${
                       timeFilter === f
-                        ? "bg-white text-foreground shadow-sm"
+                        ? "bg-white text-slate-900 shadow-sm"
                         : "text-primary-foreground/70"
                     }`}
                   >
