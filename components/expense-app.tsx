@@ -177,7 +177,7 @@ export function ExpenseApp() {
             </div>
 
             {/* Chips flotantes superpuestos */}
-            <div className="relative z-10 -mt-7 grid grid-cols-2 gap-3 px-4">
+            <div className="relative z-10 -mt-3 grid grid-cols-2 gap-3 px-4">
               <div className="surface-card rounded-2xl p-4 shadow-lg flex flex-col gap-1">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Sparkles className="h-3.5 w-3.5" />
