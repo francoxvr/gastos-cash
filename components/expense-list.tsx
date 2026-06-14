@@ -18,15 +18,27 @@ import {
 
 interface ExpenseListProps {
   onEdit: (expense: Expense) => void
+  searchQuery?: string
 }
 
-export function ExpenseList({ onEdit }: ExpenseListProps) {
+export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
   const { expenses, deleteExpense, getCategoryById } = useExpenses()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
+  const query = searchQuery.trim().toLowerCase()
+  const visibleExpenses = query
+    ? expenses.filter((e) => {
+        const cat = getCategoryById(e.category)
+        return (
+          e.description?.toLowerCase().includes(query) ||
+          cat?.label.toLowerCase().includes(query)
+        )
+      })
+    : expenses
+
   // Ordenar gastos: más recientes primero
-  const sortedExpenses = [...expenses].sort((a, b) => 
+  const sortedExpenses = [...visibleExpenses].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 
@@ -50,6 +62,18 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
         </div>
         <p className="text-muted-foreground font-medium">No hay gastos registrados aún</p>
         <p className="text-xs text-muted-foreground/60 mt-1">Toca el botón "+" para empezar</p>
+      </div>
+    )
+  }
+
+  if (sortedExpenses.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
+          🔍
+        </div>
+        <p className="text-muted-foreground font-medium">Sin resultados</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Probá con otra búsqueda</p>
       </div>
     )
   }

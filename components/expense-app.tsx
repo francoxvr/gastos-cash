@@ -12,7 +12,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -33,6 +33,7 @@ export function ExpenseApp() {
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [timeFilter, setTimeFilter] = useState<"dia" | "semana" | "mes" | "anio">("mes")
+  const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
   const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear } = useExpenses()
@@ -214,10 +215,22 @@ export function ExpenseApp() {
 
             {/* Expense list */}
             <div className="px-4">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 mt-1">
-                Movimientos
-              </p>
-              <ExpenseList onEdit={openEdit} />
+              <div className="flex items-center justify-between mb-3 mt-1 gap-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">
+                  Movimientos
+                </p>
+                <div className="relative flex-1 max-w-[180px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar..."
+                    className="w-full rounded-full surface-card pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+              <ExpenseList onEdit={openEdit} searchQuery={searchQuery} />
             </div>
           </div>
         )}
