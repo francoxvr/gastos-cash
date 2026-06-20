@@ -16,7 +16,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, exportMonthlyReportPDF, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -40,10 +40,12 @@ export function ExpenseApp() {
   const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
-  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency } = useExpenses()
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget } = useExpenses()
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
+  const [budgetEditing, setBudgetEditing] = useState(false)
+  const [budgetInput, setBudgetInput] = useState("")
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -80,6 +82,14 @@ export function ExpenseApp() {
   const todayTotal = useMemo(
     () => expenses.filter((e) => e.date === todayStr && e.type !== "income").reduce((sum, e) => sum + toBaseAmount(e), 0),
     [expenses, todayStr]
+  )
+
+  const monthTotal = useMemo(
+    () => expenses.filter((e) => {
+      const [y, m] = e.date.split("-").map(Number)
+      return (m - 1) === currentMonth && y === currentYear && e.type !== "income"
+    }).reduce((sum, e) => sum + toBaseAmount(e), 0),
+    [expenses, currentMonth, currentYear]
   )
 
   const topCategory = useMemo(() => {
@@ -324,6 +334,39 @@ export function ExpenseApp() {
               </div>
             </div>
 
+            {/* Barra de presupuesto mensual */}
+            {monthlyBudget && monthlyBudget > 0 && (
+              <div className="mx-4 surface-card rounded-3xl p-4 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Presupuesto mensual</span>
+                  </div>
+                  <span className={`text-xs font-bold ${monthTotal > monthlyBudget ? "text-destructive" : "text-muted-foreground"}`}>
+                    {formatCurrency(monthTotal)} / {formatCurrency(monthlyBudget)}
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      monthTotal > monthlyBudget
+                        ? "bg-destructive"
+                        : monthTotal / monthlyBudget > 0.8
+                        ? "bg-yellow-500"
+                        : "bg-success"
+                    }`}
+                    style={{ width: `${Math.min((monthTotal / monthlyBudget) * 100, 100)}%` }}
+                  />
+                </div>
+                {monthTotal > monthlyBudget && (
+                  <p className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    Superaste el presupuesto por {formatCurrency(monthTotal - monthlyBudget)}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Gastos recurrentes pendientes */}
             {pendingRecurring.length > 0 && (
               <div className="mx-4 flex flex-col gap-2">
@@ -468,6 +511,57 @@ export function ExpenseApp() {
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
+
+              <div className="flex flex-col">
+                <button
+                  onClick={() => {
+                    if (!budgetEditing) {
+                      setBudgetInput(monthlyBudget ? monthlyBudget.toString() : "")
+                      setBudgetEditing(true)
+                    }
+                  }}
+                  className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                      <Target className="h-4 w-4 text-accent-foreground" />
+                    </div>
+                    <span className="font-semibold text-sm">Presupuesto mensual</span>
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {monthlyBudget ? formatCurrency(monthlyBudget) : "Sin límite"}
+                  </span>
+                </button>
+                {budgetEditing && (
+                  <div className="flex items-center gap-2 px-4 pb-3">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      placeholder="0"
+                      value={budgetInput}
+                      onChange={(e) => setBudgetInput(e.target.value.replace(/[^0-9.]/g, ""))}
+                      className="h-10 flex-1 rounded-2xl bg-muted px-3 text-sm font-bold outline-none ring-primary/20 focus:ring-2"
+                    />
+                    <button
+                      onClick={async () => {
+                        const val = parseFloat(budgetInput)
+                        await setMonthlyBudget(val > 0 ? val : null)
+                        setBudgetEditing(false)
+                      }}
+                      className="h-10 rounded-2xl gradient-brand px-4 text-xs font-bold text-primary-foreground active-press"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setBudgetEditing(false)}
+                      className="h-10 rounded-2xl bg-muted px-3 text-xs font-bold text-muted-foreground active-press"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => setOverlay("currencies")}

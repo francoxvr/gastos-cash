@@ -112,6 +112,8 @@ interface ExpenseContextType {
   updateGoal: (id: string, updates: { label: string; emoji: string; targetAmount: number; targetDate?: string | null }) => Promise<void>
   addContribution: (id: string, amount: number) => Promise<void>
   deleteGoal: (id: string) => Promise<void>
+  monthlyBudget: number | null
+  setMonthlyBudget: (budget: number | null) => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
@@ -131,6 +133,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [inviteEnabled, setInviteEnabled] = useState(false)
   const [goals, setGoals] = useState<SavingsGoal[]>([])
+  const [monthlyBudget, setMonthlyBudgetState] = useState<number | null>(null)
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -141,7 +144,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       const profileRef = doc(db, 'users', user.uid)
       const profileSnap = await getDoc(profileRef)
       let profile = profileSnap.data() as
-        | { householdId?: string; members?: string[]; inviteCode?: string | null; inviteEnabled?: boolean; email?: string }
+        | { householdId?: string; members?: string[]; inviteCode?: string | null; inviteEnabled?: boolean; email?: string; monthlyBudget?: number | null }
         | undefined
 
       if (!profileSnap.exists()) {
@@ -153,6 +156,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
 
       const activeHouseholdId = profile?.householdId || user.uid
       setHouseholdId(activeHouseholdId)
+      setMonthlyBudgetState(typeof profile?.monthlyBudget === 'number' ? profile.monthlyBudget : null)
 
       // Si pertenecemos al "hogar" de otro usuario, leemos los datos de
       // compartición desde el perfil del dueño del hogar.
@@ -603,6 +607,16 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const setMonthlyBudget = async (budget: number | null) => {
+    if (!user) return
+    setMonthlyBudgetState(budget)
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { monthlyBudget: budget ?? null })
+    } catch {
+      setMonthlyBudgetState(null)
+    }
+  }
+
   return (
     <ExpenseContext.Provider value={{
       expenses, categories, addExpense, updateExpense, deleteExpense,
@@ -614,6 +628,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       householdId, isOwner, members, memberEmails, inviteCode, inviteEnabled,
       generateInviteCode, disableSharing, removeMember, joinHousehold, leaveHousehold,
       goals, addGoal, updateGoal, addContribution, deleteGoal,
+      monthlyBudget, setMonthlyBudget,
     }}>
       {children}
     </ExpenseContext.Provider>
