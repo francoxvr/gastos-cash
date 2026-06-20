@@ -10,13 +10,14 @@ import { RecurringManager } from "@/components/recurring-manager"
 import { CurrencyManager } from "@/components/currency-manager"
 import { SharedAccountManager } from "@/components/shared-account-manager"
 import { GoalsManager } from "@/components/goals-manager"
+import { ShortcutsManager } from "@/components/shortcuts-manager"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
-import { formatCurrency, exportToCSV, exportMonthlyReportPDF, toBaseAmount, type Expense } from "@/lib/expenses"
+import { formatCurrency, exportToCSV, exportMonthlyReportPDF, parseCSVImport, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target,
+  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target, Zap, Upload, TrendingUp, TrendingDown,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Tab = "home" | "stats" | "calendar" | "more"
-type Overlay = "add" | "edit" | "categories" | "recurring" | "currencies" | "shared" | "goals" | null
+type Overlay = "add" | "edit" | "categories" | "recurring" | "currencies" | "shared" | "goals" | "shortcuts" | null
 
 export function ExpenseApp() {
   const [tab, setTab] = useState<Tab>("home")
@@ -40,12 +41,13 @@ export function ExpenseApp() {
   const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
-  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget } = useExpenses()
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget, shortcuts, addShortcut, addExpense } = useExpenses()
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
   const [budgetEditing, setBudgetEditing] = useState(false)
   const [budgetInput, setBudgetInput] = useState("")
+  const [importStatus, setImportStatus] = useState<string | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -91,6 +93,19 @@ export function ExpenseApp() {
     }).reduce((sum, e) => sum + toBaseAmount(e), 0),
     [expenses, currentMonth, currentYear]
   )
+
+  const prevMonthTotal = useMemo(() => {
+    const prevM = currentMonth === 0 ? 11 : currentMonth - 1
+    const prevY = currentMonth === 0 ? currentYear - 1 : currentYear
+    return expenses.filter((e) => {
+      const [y, m] = e.date.split("-").map(Number)
+      return (m - 1) === prevM && y === prevY && e.type !== "income"
+    }).reduce((sum, e) => sum + toBaseAmount(e), 0)
+  }, [expenses, currentMonth, currentYear])
+
+  const monthChange = prevMonthTotal > 0
+    ? Math.round(((monthTotal - prevMonthTotal) / prevMonthTotal) * 100)
+    : null
 
   const topCategory = useMemo(() => {
     const totals = new Map<string, number>()
@@ -237,6 +252,11 @@ export function ExpenseApp() {
           <GoalsManager onClose={closeOverlay} />
         </div>
       )}
+      {overlay === "shortcuts" && (
+        <div className="fixed inset-0 z-50">
+          <ShortcutsManager onClose={closeOverlay} />
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
@@ -298,13 +318,19 @@ export function ExpenseApp() {
                 <h2 className="mt-1 text-[2.75rem] font-black tracking-tight leading-none tabular-nums">
                   {formatCurrency(filteredTotal)}
                 </h2>
-                <div className="mt-3 flex items-center gap-2 text-xs font-bold">
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
                   <span className="rounded-full bg-white/15 px-2.5 py-1 text-primary-foreground/80">
                     Ingresos +{formatCurrency(periodIncomeTotal)}
                   </span>
                   <span className={`rounded-full px-2.5 py-1 ${balance >= 0 ? "bg-success/30 text-white" : "bg-destructive/40 text-white"}`}>
                     Balance {balance >= 0 ? "+" : ""}{formatCurrency(balance)}
                   </span>
+                  {timeFilter === "mes" && monthChange !== null && (
+                    <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${monthChange <= 0 ? "bg-success/30 text-white" : "bg-destructive/40 text-white"}`}>
+                      {monthChange <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+                      {Math.abs(monthChange)}% vs mes ant.
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -417,6 +443,32 @@ export function ExpenseApp() {
               </div>
             )}
 
+            {/* Accesos rápidos */}
+            {shortcuts.length > 0 && (
+              <div className="flex flex-col gap-2 px-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Accesos rápidos</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {shortcuts.map((s) => {
+                    const cat = getCategoryById(s.categoryId)
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={async () => {
+                          const today = new Date().toISOString().split("T")[0]
+                          await addExpense({ amount: s.amount, category: s.categoryId, date: today, description: s.description || s.label, type: "expense", currency: getBaseCurrency().code, exchangeRate: 1 })
+                        }}
+                        className="flex shrink-0 flex-col items-center gap-1.5 rounded-2xl surface-card px-4 py-3 text-center shadow-sm active-press"
+                      >
+                        <span className="text-2xl">{s.emoji}</span>
+                        <span className="text-[10px] font-black uppercase tracking-tight leading-none">{s.label}</span>
+                        <span className="text-[10px] font-bold text-primary">{formatCurrency(s.amount)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Expense list */}
             <div className="px-4">
               <div className="flex items-center justify-between mb-3 mt-1 gap-3">
@@ -511,6 +563,54 @@ export function ExpenseApp() {
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
+
+              <button
+                onClick={() => setOverlay("shortcuts")}
+                className="flex items-center justify-between w-full px-4 py-3.5 active-press hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                    <Zap className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Accesos rápidos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {shortcuts.length > 0 && <span className="text-xs text-muted-foreground">{shortcuts.length}</span>}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </button>
+
+              <div className="flex flex-col">
+                <label className="flex items-center justify-between w-full px-4 py-3.5 cursor-pointer hover:bg-muted/30 transition-colors active-press">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
+                      <Upload className="h-4 w-4 text-accent-foreground" />
+                    </div>
+                    <span className="font-semibold text-sm">Importar CSV</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setImportStatus("Importando…")
+                      const text = await file.text()
+                      const parsed = parseCSVImport(text, categories)
+                      if (parsed.length === 0) { setImportStatus("No se encontraron gastos válidos"); setTimeout(() => setImportStatus(null), 3000); return }
+                      for (const exp of parsed) await addExpense(exp)
+                      setImportStatus(`✓ ${parsed.length} movimientos importados`)
+                      setTimeout(() => setImportStatus(null), 3500)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+                {importStatus && (
+                  <p className="px-4 pb-2 text-xs font-medium text-primary">{importStatus}</p>
+                )}
+              </div>
 
               <div className="flex flex-col">
                 <button

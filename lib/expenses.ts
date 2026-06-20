@@ -81,6 +81,39 @@ export function exportToCSV(expenses: Expense[], baseCode = "ARS") {
   document.body.removeChild(link)
 }
 
+export function parseCSVImport(
+  text: string,
+  categories: { id: string; label: string }[]
+): Omit<Expense, "id">[] {
+  const sep = text.startsWith("sep=;") ? ";" : ","
+  const lines = text.split(/\r?\n/).filter(Boolean)
+  const results: Omit<Expense, "id">[] = []
+
+  for (const line of lines) {
+    if (line.startsWith("sep=") || line.startsWith("Fecha") || line.startsWith("TOTAL") || line.startsWith("BALANCE")) continue
+    const cols = line.split(sep)
+    if (cols.length < 3) continue
+
+    const date = cols[0]?.trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+
+    const typeRaw = cols[1]?.trim().toLowerCase()
+    const type: "expense" | "income" = typeRaw === "ingreso" ? "income" : "expense"
+    const amount = parseFloat(cols[2]?.replace(",", ".") || "0")
+    if (!amount || isNaN(amount)) continue
+
+    const currency = cols[3]?.trim() || undefined
+    const catRaw = cols[5]?.trim() || ""
+    const description = (cols[6] || cols[3] || "").trim()
+    const matched = categories.find(c => c.id === catRaw || c.label.toLowerCase() === catRaw.toLowerCase())
+    const category = matched?.id || categories[0]?.id || ""
+
+    results.push({ amount, category, date, description, type, currency: currency || undefined, exchangeRate: 1 })
+  }
+
+  return results
+}
+
 const MONTH_NAMES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",

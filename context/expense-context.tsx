@@ -68,6 +68,15 @@ export interface SavingsGoal {
   targetDate?: string | null // "YYYY-MM-DD"
 }
 
+export interface Shortcut {
+  id: string
+  label: string
+  emoji: string
+  amount: number
+  categoryId: string
+  description: string
+}
+
 interface ExpenseContextType {
   expenses: Expense[]
   categories: Category[]
@@ -114,6 +123,9 @@ interface ExpenseContextType {
   deleteGoal: (id: string) => Promise<void>
   monthlyBudget: number | null
   setMonthlyBudget: (budget: number | null) => Promise<void>
+  shortcuts: Shortcut[]
+  addShortcut: (s: Omit<Shortcut, "id">) => Promise<void>
+  deleteShortcut: (id: string) => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined)
@@ -134,6 +146,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [inviteEnabled, setInviteEnabled] = useState(false)
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [monthlyBudget, setMonthlyBudgetState] = useState<number | null>(null)
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>([])
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -192,18 +205,21 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       const recurringRef = collection(db, 'users', activeHouseholdId, 'recurring')
       const currenciesRef = collection(db, 'users', activeHouseholdId, 'currencies')
       const goalsRef = collection(db, 'users', activeHouseholdId, 'goals')
+      const shortcutsRef = collection(db, 'users', activeHouseholdId, 'shortcuts')
 
-      const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap, goalsSnap] = await Promise.all([
+      const [expensesSnap, categoriesSnap, recurringSnap, currenciesSnap, goalsSnap, shortcutsSnap] = await Promise.all([
         getDocs(query(expensesRef, orderBy('date', 'desc'))),
         getDocs(query(categoriesRef, orderBy('label', 'asc'))),
         getDocs(recurringRef),
         getDocs(currenciesRef),
         getDocs(goalsRef),
+        getDocs(shortcutsRef),
       ])
 
       setExpenses(expensesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
       setRecurringExpenses(recurringSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringExpense)))
       setGoals(goalsSnap.docs.map(d => ({ id: d.id, ...d.data() } as SavingsGoal)))
+      setShortcuts(shortcutsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shortcut)))
 
       if (currenciesSnap.empty) {
         const seedMarkerRef = doc(db, 'users', activeHouseholdId, 'meta', 'seedCurrencies')
@@ -607,6 +623,18 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const addShortcut = async (s: Omit<Shortcut, "id">) => {
+    if (!user) return
+    const ref = await addDoc(collection(db, 'users', householdId, 'shortcuts'), s)
+    setShortcuts(prev => [...prev, { id: ref.id, ...s }])
+  }
+
+  const deleteShortcut = async (id: string) => {
+    if (!user) return
+    setShortcuts(prev => prev.filter(s => s.id !== id))
+    await deleteDoc(doc(db, 'users', householdId, 'shortcuts', id))
+  }
+
   const setMonthlyBudget = async (budget: number | null) => {
     if (!user) return
     setMonthlyBudgetState(budget)
@@ -629,6 +657,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
       generateInviteCode, disableSharing, removeMember, joinHousehold, leaveHousehold,
       goals, addGoal, updateGoal, addContribution, deleteGoal,
       monthlyBudget, setMonthlyBudget,
+      shortcuts, addShortcut, deleteShortcut,
     }}>
       {children}
     </ExpenseContext.Provider>
