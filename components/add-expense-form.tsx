@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
+import { useAuth } from "@/context/auth-context"
 import type { Expense } from "@/lib/expenses"
 import { ArrowLeft, Check, Calendar as CalendarIcon, Type } from "lucide-react"
 
@@ -14,7 +15,8 @@ interface AddExpenseFormProps {
 }
 
 export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps) {
-  const { addExpense, updateExpense, categories, currencies, getBaseCurrency, getCurrencyByCode } = useExpenses()
+  const { addExpense, updateExpense, categories, currencies, getBaseCurrency, getCurrencyByCode, members, memberEmails } = useExpenses()
+  const { user } = useAuth()
   const isEditing = !!editingExpense
 
   // Obtiene la fecha actual en formato YYYY-MM-DD local
@@ -30,6 +32,9 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const [description, setDescription] = useState(isEditing ? editingExpense.description : "")
   const [currencyCode, setCurrencyCode] = useState(
     isEditing ? (editingExpense.currency || getBaseCurrency().code) : getBaseCurrency().code
+  )
+  const [paidBy, setPaidBy] = useState(
+    isEditing ? (editingExpense.paidBy || user?.uid || "") : (user?.uid || "")
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -68,6 +73,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       type,
       currency: selectedCurrency.code,
       exchangeRate: selectedCurrency.rateToBase,
+      paidBy: paidBy || user?.uid || "",
     }
 
     if (isEditing && editingExpense) {
@@ -183,6 +189,29 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
             })}
           </div>
         </div>
+        )}
+
+        {/* Selector de quién pagó (solo en cuentas compartidas) */}
+        {type === "expense" && members.length > 1 && (
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Pagado por</Label>
+            <div className="flex gap-1 rounded-2xl surface-card p-1">
+              {members.map((uid) => (
+                <button
+                  key={uid}
+                  type="button"
+                  onClick={() => setPaidBy(uid)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold truncate px-2 transition-all active-press ${
+                    paidBy === uid
+                      ? "gradient-brand text-primary-foreground shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {uid === user?.uid ? "Yo" : (memberEmails[uid] || uid).split("@")[0]}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Otros Detalles */}

@@ -7,6 +7,7 @@ export interface Expense {
   type?: "expense" | "income"
   currency?: string
   exchangeRate?: number
+  paidBy?: string
 }
 
 export function formatCurrency(amount: number, symbol = "$"): string {

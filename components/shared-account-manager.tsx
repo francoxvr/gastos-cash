@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useExpenses } from "@/context/expense-context"
 import { useAuth } from "@/context/auth-context"
-import { ArrowLeft, Copy, Check, Users, LogOut, UserMinus, Share2 } from "lucide-react"
+import { formatCurrency, toBaseAmount } from "@/lib/expenses"
+import { ArrowLeft, Copy, Check, Users, LogOut, UserMinus, Share2, Scale } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ export function SharedAccountManager({ onClose }: SharedAccountManagerProps) {
   const {
     isOwner, members, memberEmails, inviteCode, inviteEnabled,
     generateInviteCode, disableSharing, removeMember, joinHousehold, leaveHousehold,
+    expenses, currentMonth, currentYear, getBaseCurrency,
   } = useExpenses()
 
   const [copied, setCopied] = useState(false)
@@ -56,6 +58,37 @@ export function SharedAccountManager({ onClose }: SharedAccountManagerProps) {
 
   const otherMembers = members.filter((uid) => uid !== user?.uid)
 
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+  const symbol = getBaseCurrency().symbol
+
+  const balance = useMemo(() => {
+    const monthExpenses = expenses.filter((e) => {
+      if (e.type === "income") return false
+      const [year, month] = e.date.split("-").map(Number)
+      return (month - 1) === currentMonth && year === currentYear
+    })
+    const total = monthExpenses.reduce((sum, e) => sum + toBaseAmount(e), 0)
+    const fairShare = members.length > 0 ? total / members.length : 0
+
+    const paid = new Map<string, number>()
+    members.forEach((uid) => paid.set(uid, 0))
+    monthExpenses.forEach((e) => {
+      if (e.paidBy && paid.has(e.paidBy)) {
+        paid.set(e.paidBy, (paid.get(e.paidBy) || 0) + toBaseAmount(e))
+      }
+    })
+
+    const balances = members.map((uid) => ({
+      uid,
+      paidAmount: paid.get(uid) || 0,
+      diff: (paid.get(uid) || 0) - fairShare,
+    }))
+
+    return { total, fairShare, balances }
+  }, [expenses, members, currentMonth, currentYear])
+
+  const getName = (uid: string) => (uid === user?.uid ? "Vos" : (memberEmails[uid] || uid).split("@")[0])
+
   return (
     <div className="flex min-h-screen flex-col bg-background animate-fade-in">
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
@@ -69,6 +102,36 @@ export function SharedAccountManager({ onClose }: SharedAccountManagerProps) {
       </header>
 
       <div className="flex flex-1 flex-col gap-4 px-4 pb-24">
+        {members.length > 1 && (
+          <div className="flex flex-col gap-3 rounded-3xl surface-card p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Scale className="h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold">Balance de {monthNames[currentMonth]}</span>
+                <span className="text-xs text-muted-foreground">
+                  Gasto total {formatCurrency(balance.total, symbol)} · parte por persona {formatCurrency(balance.fairShare, symbol)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {balance.balances.map(({ uid, paidAmount, diff }) => (
+                <div key={uid} className="flex items-center justify-between rounded-2xl bg-muted/40 p-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{getName(uid)}</span>
+                    <span className="text-xs text-muted-foreground">Pagó {formatCurrency(paidAmount, symbol)}</span>
+                  </div>
+                  <span className={`text-sm font-bold ${diff > 0.5 ? "text-success" : diff < -0.5 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {diff > 0.5 ? `le deben ${formatCurrency(diff, symbol)}` : diff < -0.5 ? `debe ${formatCurrency(-diff, symbol)}` : "al día"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!isOwner ? (
           <div className="flex flex-col gap-4 rounded-3xl surface-card p-5">
             <div className="flex items-center gap-3">
