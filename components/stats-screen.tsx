@@ -21,6 +21,8 @@ import {
   ResponsiveContainer,
   Cell,
   Legend,
+  PieChart,
+  Pie,
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
@@ -33,6 +35,7 @@ interface StatsScreenProps {
 export function StatsScreen({ onClose }: StatsScreenProps) {
   const { expenses, categories, currentMonth, currentYear } = useExpenses()
   const [period, setPeriod] = useState<TimePeriod>("dia")
+  const [selectedCatIdx, setSelectedCatIdx] = useState<number | null>(null)
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -226,35 +229,76 @@ export function StatsScreen({ onClose }: StatsScreenProps) {
           </ChartContainer>
         </div>
 
-        {/* Gráfico de Barras Horizontales */}
+        {/* Donut chart de distribución */}
         <div className="rounded-3xl surface-card p-6">
-          <h2 className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground text-center">Distribución por Categoría</h2>
-          
+          <h2 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground text-center">
+            Distribución {periodLabel[period]}
+          </h2>
+
           {stats.total > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.byCategory} layout="vertical" margin={{ left: -20, right: 10 }}>
-                  <XAxis type="number" hide />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    width={80}
-                    tick={{ fill: "currentColor", fontSize: 10, fontWeight: 700 }}
-                  />
-                  <ChartTooltip 
-                    cursor={{ fill: 'rgba(0,0,0,0.03)' }} 
-                    content={<ChartTooltipContent hideLabel />} 
-                  />
-                  <Bar dataKey="amount" radius={[0, 10, 10, 0]} barSize={20}>
-                    {stats.byCategory.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
+            <>
+              <div className="relative flex justify-center">
+                <PieChart width={220} height={220}>
+                  <Pie
+                    data={stats.byCategory}
+                    cx={110}
+                    cy={110}
+                    innerRadius={68}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="amount"
+                    strokeWidth={0}
+                    onClick={(_, idx) => setSelectedCatIdx(idx === selectedCatIdx ? null : idx)}
+                  >
+                    {stats.byCategory.map((entry, idx) => (
+                      <Cell
+                        key={`donut-${idx}`}
+                        fill={entry.fill}
+                        opacity={selectedCatIdx === null || selectedCatIdx === idx ? 1 : 0.25}
+                      />
                     ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+                  </Pie>
+                </PieChart>
+
+                {/* Etiqueta central */}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+                  {selectedCatIdx !== null && stats.byCategory[selectedCatIdx] ? (
+                    <>
+                      <span className="text-2xl leading-none">{stats.byCategory[selectedCatIdx].emoji}</span>
+                      <span className="text-sm font-black tracking-tight tabular-nums">
+                        {formatCurrency(stats.byCategory[selectedCatIdx].amount)}
+                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground">
+                        {stats.byCategory[selectedCatIdx].percentage}% del total
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total</span>
+                      <span className="text-lg font-black tracking-tight tabular-nums">{formatCurrency(stats.total)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Leyenda */}
+              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+                {stats.byCategory.map((cat, idx) => (
+                  <button
+                    key={cat.category}
+                    type="button"
+                    onClick={() => setSelectedCatIdx(idx === selectedCatIdx ? null : idx)}
+                    className={`flex items-center gap-2 rounded-xl px-2 py-1 text-left transition-all active-press ${
+                      selectedCatIdx === idx ? "bg-muted" : ""
+                    }`}
+                  >
+                    <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.fill }} />
+                    <span className="truncate text-xs font-semibold">{cat.emoji} {cat.label}</span>
+                    <span className="ml-auto shrink-0 text-[10px] font-bold text-muted-foreground">{cat.percentage}%</span>
+                  </button>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="flex h-[200px] flex-col items-center justify-center gap-3 text-muted-foreground/40">
               <BarChart3 className="h-12 w-12" />
