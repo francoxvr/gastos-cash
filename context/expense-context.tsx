@@ -32,6 +32,7 @@ export interface Expense {
   currency?: string
   exchangeRate?: number
   paidBy?: string
+  notes?: string
 }
 
 export interface Category {

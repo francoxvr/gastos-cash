@@ -144,6 +144,13 @@ export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
                 </div>
               </button>
 
+              {/* Nota expandida */}
+              {isExpanded && expense.notes && (
+                <div className="px-4 pb-3 pt-1 text-xs text-primary-foreground/80 italic border-t border-white/10">
+                  {expense.notes}
+                </div>
+              )}
+
               {/* Acciones Expandibles */}
               {isExpanded && (
                 <div className="flex border-t border-white/15 animate-slide-down">

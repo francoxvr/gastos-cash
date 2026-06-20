@@ -5,52 +5,66 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from "react"
 
-type Theme = "light" | "dark"
+export type Theme = "light" | "dark" | "auto"
 
 interface ThemeContextType {
   theme: Theme
+  resolvedTheme: "light" | "dark"
   toggleTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
+function applyTheme(resolved: "light" | "dark") {
+  document.documentElement.classList.toggle("dark", resolved === "dark")
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Inicializamos con un valor seguro para el servidor
   const [theme, setTheme] = useState<Theme>("light")
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light")
   const [mounted, setMounted] = useState(false)
+
+  const resolve = useCallback((t: Theme): "light" | "dark" => {
+    if (t === "auto") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    return t
+  }, [])
 
   useEffect(() => {
     setMounted(true)
-    const stored = window.localStorage.getItem("theme-app") as Theme | null
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    const stored = (window.localStorage.getItem("theme-app") as Theme | null) || "auto"
+    const resolved = resolve(stored)
+    setTheme(stored)
+    setResolvedTheme(resolved)
+    applyTheme(resolved)
 
-    const initialTheme = stored || (prefersDark ? "dark" : "light")
-    
-    setTheme(initialTheme)
-    document.documentElement.classList.toggle("dark", initialTheme === "dark")
-  }, [])
+    if (stored === "auto") {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)")
+      const handler = (e: MediaQueryListEvent) => {
+        const r = e.matches ? "dark" : "light"
+        setResolvedTheme(r)
+        applyTheme(r)
+      }
+      mq.addEventListener("change", handler)
+      return () => mq.removeEventListener("change", handler)
+    }
+  }, [resolve])
 
   const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light"
+    const cycle: Theme[] = ["light", "dark", "auto"]
+    const next = cycle[(cycle.indexOf(theme) + 1) % 3]
+    const resolved = resolve(next)
     setTheme(next)
-    
-    // Aplicamos el cambio al HTML para que Tailwind lo detecte
-    if (next === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-    
+    setResolvedTheme(resolved)
+    applyTheme(resolved)
     window.localStorage.setItem("theme-app", next)
   }
 
-  // Evitamos renderizar contenido que dependa del tema hasta que el cliente esté listo
-  // Esto previene errores de "Hydration Mismatch"
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, toggleTheme }}>
       <div style={{ visibility: mounted ? "visible" : "hidden" }}>
         {children}
       </div>

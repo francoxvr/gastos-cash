@@ -17,7 +17,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, exportMonthlyReportPDF, parseCSVImport, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Download, Trash2, LogOut, ChevronRight, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target, Zap, Upload, TrendingUp, TrendingDown,
+  Sun, Moon, Monitor, Download, Trash2, LogOut, ChevronRight, ChevronLeft, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target, Zap, Upload, TrendingUp, TrendingDown, Heart,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -41,8 +41,8 @@ export function ExpenseApp() {
   const [searchQuery, setSearchQuery] = useState("")
   const [mounted, setMounted] = useState(false)
 
-  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget, shortcuts, addShortcut, addExpense } = useExpenses()
-  const { theme, toggleTheme } = useTheme()
+  const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, setCurrentMonth, setCurrentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget, shortcuts, addShortcut, addExpense } = useExpenses()
+  const { theme, resolvedTheme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [confirmAction, setConfirmAction] = useState<"signOut" | "clearAll" | null>(null)
   const [budgetEditing, setBudgetEditing] = useState(false)
@@ -106,6 +106,38 @@ export function ExpenseApp() {
   const monthChange = prevMonthTotal > 0
     ? Math.round(((monthTotal - prevMonthTotal) / prevMonthTotal) * 100)
     : null
+
+  const now = new Date()
+  const isCurrentMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear()
+
+  const navigatePrevMonth = () => {
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1) }
+    else setCurrentMonth(currentMonth - 1)
+  }
+  const navigateNextMonth = () => {
+    if (!isCurrentMonth) {
+      if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1) }
+      else setCurrentMonth(currentMonth + 1)
+    }
+  }
+
+  const monthIncomeTotal = useMemo(
+    () => expenses.filter((e) => {
+      const [y, m] = e.date.split("-").map(Number)
+      return (m - 1) === currentMonth && y === currentYear && e.type === "income"
+    }).reduce((sum, e) => sum + toBaseAmount(e), 0),
+    [expenses, currentMonth, currentYear]
+  )
+
+  const healthData = useMemo(() => {
+    if (monthIncomeTotal === 0 && monthTotal === 0) return null
+    const savingsRate = monthIncomeTotal > 0 ? ((monthIncomeTotal - monthTotal) / monthIncomeTotal) * 100 : -100
+    const budgetOk = monthlyBudget ? monthTotal <= monthlyBudget : null
+    if (savingsRate >= 20) return { label: "Excelente", emoji: "🌟", color: "text-success", bg: "bg-success/10", tip: `Ahorraste ${Math.round(savingsRate)}% de tus ingresos.` }
+    if (savingsRate >= 0) return { label: "En camino", emoji: "✅", color: "text-primary", bg: "bg-primary/10", tip: budgetOk === false ? "Cuidado con el presupuesto." : `Gastos bajo control.` }
+    if (savingsRate >= -30) return { label: "Cuidado", emoji: "⚠️", color: "text-yellow-500", bg: "bg-yellow-500/10", tip: `Gastaste más de lo que ingresaste. Revisá categorías grandes.` }
+    return { label: "Crítico", emoji: "🔴", color: "text-destructive", bg: "bg-destructive/10", tip: `Los gastos superan ampliamente los ingresos. Ajustá el presupuesto.` }
+  }, [monthTotal, monthIncomeTotal, monthlyBudget])
 
   const topCategory = useMemo(() => {
     const totals = new Map<string, number>()
@@ -271,7 +303,7 @@ export function ExpenseApp() {
             onClick={toggleTheme}
             className="h-10 w-10 flex items-center justify-center rounded-2xl surface-card text-muted-foreground active-press transition-colors"
           >
-            {theme === "light" ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
+            {theme === "auto" ? <Monitor className="h-[18px] w-[18px]" /> : resolvedTheme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
           </button>
           <button
             onClick={() => setConfirmAction("signOut")}
@@ -310,6 +342,18 @@ export function ExpenseApp() {
                   </button>
                 ))}
               </div>
+
+              {timeFilter === "mes" && (
+                <div className="relative z-10 mt-3 flex items-center justify-between">
+                  <button onClick={navigatePrevMonth} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/15 active-press">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm font-bold tracking-wide">{MONTH_NAMES[currentMonth]} {currentYear}</span>
+                  <button onClick={navigateNextMonth} disabled={isCurrentMonth} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white/15 active-press disabled:opacity-30">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
 
               <div className="relative z-10 mt-7">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground/60">
@@ -359,6 +403,24 @@ export function ExpenseApp() {
                 )}
               </div>
             </div>
+
+            {/* Widget de salud financiera */}
+            {healthData && (
+              <div className={`mx-4 rounded-3xl p-4 ${healthData.bg} flex items-center gap-4`}>
+                <span className="text-3xl shrink-0">{healthData.emoji}</span>
+                <div className="flex flex-1 flex-col gap-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-black ${healthData.color}`}>{healthData.label}</span>
+                    {monthIncomeTotal > 0 && (
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {monthIncomeTotal > monthTotal ? `+${formatCurrency(monthIncomeTotal - monthTotal)} ahorrado` : `-${formatCurrency(monthTotal - monthIncomeTotal)} en rojo`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{healthData.tip}</p>
+                </div>
+              </div>
+            )}
 
             {/* Barra de presupuesto mensual */}
             {monthlyBudget && monthlyBudget > 0 && (
@@ -736,17 +798,13 @@ export function ExpenseApp() {
               >
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-2xl bg-accent flex items-center justify-center">
-                    {theme === "light"
-                      ? <Moon className="h-4 w-4 text-accent-foreground" />
-                      : <Sun className="h-4 w-4 text-accent-foreground" />}
+                    {theme === "auto" ? <Monitor className="h-4 w-4 text-accent-foreground" /> : resolvedTheme === "dark" ? <Sun className="h-4 w-4 text-accent-foreground" /> : <Moon className="h-4 w-4 text-accent-foreground" />}
                   </div>
                   <span className="font-semibold text-sm">
-                    {theme === "light" ? "Modo oscuro" : "Modo claro"}
+                    {theme === "auto" ? "Tema automático" : resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}
                   </span>
                 </div>
-                <div className={`relative h-5 w-9 rounded-full transition-colors ${theme === "dark" ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                  <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${theme === "dark" ? "translate-x-4" : "translate-x-0.5"}`} />
-                </div>
+                <span className="text-xs font-medium text-muted-foreground capitalize">{theme === "auto" ? "Auto" : resolvedTheme === "dark" ? "Oscuro" : "Claro"}</span>
               </button>
             </div>
 

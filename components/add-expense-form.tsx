@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
 import { useAuth } from "@/context/auth-context"
 import type { Expense } from "@/lib/expenses"
-import { ArrowLeft, Check, Calendar as CalendarIcon, Type } from "lucide-react"
+import { ArrowLeft, Check, Calendar as CalendarIcon, Type, StickyNote } from "lucide-react"
 
 interface AddExpenseFormProps {
   onClose: () => void
@@ -36,6 +36,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   const [paidBy, setPaidBy] = useState(
     isEditing ? (editingExpense.paidBy || user?.uid || "") : (user?.uid || "")
   )
+  const [notes, setNotes] = useState(isEditing ? (editingExpense.notes || "") : "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const selectedCurrency = getCurrencyByCode(currencyCode)
@@ -74,6 +75,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       currency: selectedCurrency.code,
       exchangeRate: selectedCurrency.rateToBase,
       paidBy: paidBy || user?.uid || "",
+      notes: notes.trim() || undefined,
     }
 
     if (isEditing && editingExpense) {
@@ -226,6 +228,20 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="h-16 w-full rounded-3xl surface-card pl-12 pr-4 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4"
+            />
+          </div>
+
+          {/* Nota */}
+          <div className="relative">
+            <div className="absolute left-4 top-4 text-muted-foreground/50">
+              <StickyNote className="h-5 w-5" />
+            </div>
+            <textarea
+              placeholder="Nota (opcional)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full rounded-3xl surface-card pl-12 pr-4 pt-4 pb-3 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 resize-none"
             />
           </div>
 
