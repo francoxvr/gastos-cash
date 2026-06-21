@@ -76,6 +76,7 @@ export interface Shortcut {
   amount: number
   categoryId: string
   description: string
+  type?: "expense" | "income"
 }
 
 interface ExpenseContextType {

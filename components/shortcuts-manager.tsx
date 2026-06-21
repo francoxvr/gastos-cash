@@ -17,6 +17,7 @@ export function ShortcutsManager({ onClose }: ShortcutsManagerProps) {
   const symbol = getBaseCurrency().symbol
 
   const [adding, setAdding] = useState(false)
+  const [type, setType] = useState<"expense" | "income">("expense")
   const [emoji, setEmoji] = useState("⚡")
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
@@ -28,13 +29,14 @@ export function ShortcutsManager({ onClose }: ShortcutsManagerProps) {
     const amt = parseFloat(amount)
     if (!label.trim() || !amt || isNaN(amt)) return
     setSaving(true)
-    await addShortcut({ emoji, label: label.trim(), amount: amt, categoryId, description: description.trim() })
+    await addShortcut({ emoji, label: label.trim(), amount: amt, categoryId: type === "income" ? "" : categoryId, description: description.trim(), type })
     setSaving(false)
     setAdding(false)
     setLabel("")
     setAmount("")
     setDescription("")
     setEmoji("⚡")
+    setType("expense")
     setCategoryId(categories[0]?.id || "")
   }
 
@@ -69,8 +71,10 @@ export function ShortcutsManager({ onClose }: ShortcutsManagerProps) {
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
               <span className="font-bold truncate">{s.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatCurrency(s.amount, symbol)} · {categories.find(c => c.id === s.categoryId)?.emoji} {categories.find(c => c.id === s.categoryId)?.label}
+              <span className={`text-xs ${s.type === "income" ? "text-success font-semibold" : "text-muted-foreground"}`}>
+                {s.type === "income"
+                  ? `+${formatCurrency(s.amount, symbol)} · Ingreso`
+                  : `${formatCurrency(s.amount, symbol)} · ${categories.find(c => c.id === s.categoryId)?.emoji} ${categories.find(c => c.id === s.categoryId)?.label}`}
               </span>
             </div>
             <button
@@ -85,6 +89,23 @@ export function ShortcutsManager({ onClose }: ShortcutsManagerProps) {
         {adding ? (
           <div className="flex flex-col gap-4 rounded-3xl surface-card p-5">
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Nuevo acceso rápido</p>
+
+            <div className="flex gap-1 rounded-2xl bg-muted p-1">
+              {(["expense", "income"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all active-press ${
+                    type === t
+                      ? t === "income" ? "bg-success text-success-foreground shadow-sm" : "gradient-brand text-primary-foreground shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {t === "income" ? "Ingreso" : "Gasto"}
+                </button>
+              ))}
+            </div>
 
             <div className="flex gap-3">
               <div className="flex flex-col gap-1">
@@ -118,26 +139,28 @@ export function ShortcutsManager({ onClose }: ShortcutsManagerProps) {
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setCategoryId(cat.id)}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl py-3 text-xs font-bold transition-all active-press ${
-                      categoryId === cat.id
-                        ? "gradient-brand text-primary-foreground shadow-sm"
-                        : "surface-card text-muted-foreground opacity-60"
-                    }`}
-                  >
-                    <span className="text-xl">{cat.emoji}</span>
-                    <span className="text-[9px] uppercase tracking-tight leading-none">{cat.label}</span>
-                  </button>
-                ))}
+            {type === "expense" && (
+              <div className="flex flex-col gap-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategoryId(cat.id)}
+                      className={`flex flex-col items-center gap-1.5 rounded-2xl py-3 text-xs font-bold transition-all active-press ${
+                        categoryId === cat.id
+                          ? "gradient-brand text-primary-foreground shadow-sm"
+                          : "surface-card text-muted-foreground opacity-60"
+                      }`}
+                    >
+                      <span className="text-xl">{cat.emoji}</span>
+                      <span className="text-[9px] uppercase tracking-tight leading-none">{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex gap-2">
               <Button

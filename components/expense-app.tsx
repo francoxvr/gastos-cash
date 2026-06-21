@@ -631,19 +631,19 @@ export function ExpenseApp() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Accesos rápidos</p>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   {shortcuts.map((s) => {
-                    const cat = getCategoryById(s.categoryId)
+                    const isIncome = s.type === "income"
                     return (
                       <button
                         key={s.id}
                         onClick={async () => {
                           const today = new Date().toISOString().split("T")[0]
-                          await addExpense({ amount: s.amount, category: s.categoryId, date: today, description: s.description || s.label, type: "expense", currency: getBaseCurrency().code, exchangeRate: 1 })
+                          await addExpense({ amount: s.amount, category: isIncome ? "" : s.categoryId, date: today, description: s.description || s.label, type: isIncome ? "income" : "expense", currency: getBaseCurrency().code, exchangeRate: 1 })
                         }}
                         className="flex shrink-0 flex-col items-center gap-1.5 rounded-2xl surface-card px-4 py-3 text-center shadow-sm active-press"
                       >
                         <span className="text-2xl">{s.emoji}</span>
                         <span className="text-[10px] font-black uppercase tracking-tight leading-none">{s.label}</span>
-                        <span className="text-[10px] font-bold text-primary">{formatCurrency(s.amount)}</span>
+                        <span className={`text-[10px] font-bold ${isIncome ? "text-success" : "text-primary"}`}>{isIncome ? "+" : ""}{formatCurrency(s.amount)}</span>
                       </button>
                     )
                   })}

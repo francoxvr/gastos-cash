@@ -41,7 +41,9 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
       e.description?.toLowerCase().includes(query) ||
       e.notes?.toLowerCase().includes(query) ||
       cat?.label.toLowerCase().includes(query) ||
-      (e.type === "income" && "ingreso".includes(query))
+      (e.type === "income" && "ingreso".includes(query)) ||
+      e.amount.toString().includes(query) ||
+      Math.round(toBaseAmount(e)).toString().includes(query)
     )
   })
 
