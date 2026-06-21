@@ -39,6 +39,8 @@ export function ExpenseApp() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [timeFilter, setTimeFilter] = useState<"dia" | "semana" | "mes" | "anio">("mes")
   const [searchQuery, setSearchQuery] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<"date-desc" | "amount-desc" | "amount-asc">("date-desc")
   const [mounted, setMounted] = useState(false)
 
   const { expenses, clearAllExpenses, categories, getCategoryById, currentMonth, currentYear, setCurrentMonth, setCurrentYear, recurringExpenses, confirmRecurring, skipRecurring, getBaseCurrency, monthlyBudget, setMonthlyBudget, shortcuts, addShortcut, addExpense } = useExpenses()
@@ -532,12 +534,11 @@ export function ExpenseApp() {
             )}
 
             {/* Expense list */}
-            <div className="px-4">
-              <div className="flex items-center justify-between mb-3 mt-1 gap-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">
-                  Movimientos
-                </p>
-                <div className="relative flex-1 max-w-[180px]">
+            <div className="flex flex-col gap-2 px-4">
+              {/* Barra superior: título + búsqueda + sort */}
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">Movimientos</p>
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
                   <input
                     type="text"
@@ -547,8 +548,41 @@ export function ExpenseApp() {
                     className="w-full rounded-full surface-card pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
+                <button
+                  onClick={() => setSortOrder(s => s === "date-desc" ? "amount-desc" : s === "amount-desc" ? "amount-asc" : "date-desc")}
+                  className="shrink-0 rounded-full surface-card px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground active-press whitespace-nowrap"
+                >
+                  {sortOrder === "date-desc" ? "↓ Fecha" : sortOrder === "amount-desc" ? "↓ Monto" : "↑ Monto"}
+                </button>
               </div>
-              <ExpenseList onEdit={openEdit} searchQuery={searchQuery} />
+
+              {/* Chips de categoría */}
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <button
+                  onClick={() => setCategoryFilter(null)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-all active-press ${!categoryFilter ? "gradient-brand text-primary-foreground" : "surface-card text-muted-foreground"}`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setCategoryFilter(categoryFilter === "income" ? null : "income")}
+                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-all active-press ${categoryFilter === "income" ? "bg-success text-success-foreground" : "surface-card text-muted-foreground"}`}
+                >
+                  💰 Ingresos
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition-all active-press ${categoryFilter === cat.id ? "text-primary-foreground" : "surface-card text-muted-foreground"}`}
+                    style={categoryFilter === cat.id ? { backgroundColor: cat.color } : undefined}
+                  >
+                    {cat.emoji} {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <ExpenseList onEdit={openEdit} searchQuery={searchQuery} categoryFilter={categoryFilter} sortOrder={sortOrder} />
             </div>
           </div>
         )}

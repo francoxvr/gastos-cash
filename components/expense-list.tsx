@@ -16,32 +16,38 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+type SortOrder = "date-desc" | "amount-desc" | "amount-asc"
+
 interface ExpenseListProps {
   onEdit: (expense: Expense) => void
   searchQuery?: string
+  categoryFilter?: string | null
+  sortOrder?: SortOrder
 }
 
-export function ExpenseList({ onEdit, searchQuery = "" }: ExpenseListProps) {
+export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, sortOrder = "date-desc" }: ExpenseListProps) {
   const { expenses, deleteExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
   const query = searchQuery.trim().toLowerCase()
-  const visibleExpenses = query
-    ? expenses.filter((e) => {
-        const cat = getCategoryById(e.category)
-        return (
-          e.description?.toLowerCase().includes(query) ||
-          cat?.label.toLowerCase().includes(query) ||
-          (e.type === "income" && "ingreso".includes(query))
-        )
-      })
-    : expenses
+  const visibleExpenses = expenses.filter((e) => {
+    if (categoryFilter && categoryFilter !== "income" && e.category !== categoryFilter) return false
+    if (categoryFilter === "income" && e.type !== "income") return false
+    if (!query) return true
+    const cat = getCategoryById(e.category)
+    return (
+      e.description?.toLowerCase().includes(query) ||
+      cat?.label.toLowerCase().includes(query) ||
+      (e.type === "income" && "ingreso".includes(query))
+    )
+  })
 
-  // Ordenar gastos: más recientes primero
-  const sortedExpenses = [...visibleExpenses].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  const sortedExpenses = [...visibleExpenses].sort((a, b) => {
+    if (sortOrder === "amount-desc") return toBaseAmount(b) - toBaseAmount(a)
+    if (sortOrder === "amount-asc") return toBaseAmount(a) - toBaseAmount(b)
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
 
   const handleToggleActions = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
