@@ -197,7 +197,7 @@ export function ExpenseApp() {
     return best
   }, [periodExpenses])
 
-  const overBudgetCategories = useMemo(() => {
+  const categorySpentMap = useMemo(() => {
     const spent = new Map<string, number>()
     for (const e of expenses) {
       const [year, month] = e.date.split("-").map(Number)
@@ -205,10 +205,24 @@ export function ExpenseApp() {
         spent.set(e.category, (spent.get(e.category) || 0) + toBaseAmount(e))
       }
     }
+    return spent
+  }, [expenses, currentMonth, currentYear])
+
+  const overBudgetCategories = useMemo(() => {
     return categories
-      .filter((cat) => cat.budget && (spent.get(cat.id) || 0) > cat.budget)
-      .map((cat) => ({ cat, spent: spent.get(cat.id) || 0 }))
-  }, [expenses, categories, currentMonth, currentYear])
+      .filter((cat) => cat.budget && (categorySpentMap.get(cat.id) || 0) > cat.budget)
+      .map((cat) => ({ cat, spent: categorySpentMap.get(cat.id) || 0 }))
+  }, [categories, categorySpentMap])
+
+  const nearBudgetCategories = useMemo(() => {
+    return categories
+      .filter((cat) => {
+        if (!cat.budget) return false
+        const spent = categorySpentMap.get(cat.id) || 0
+        return spent <= cat.budget && spent / cat.budget >= 0.8
+      })
+      .map((cat) => ({ cat, spent: categorySpentMap.get(cat.id) || 0 }))
+  }, [categories, categorySpentMap])
 
   const pendingRecurring = useMemo(() => {
     const now = new Date()
@@ -591,6 +605,20 @@ export function ExpenseApp() {
                     <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
                     <p className="text-xs font-semibold text-destructive">
                       Superaste el presupuesto de <span className="font-extrabold">{cat.emoji} {cat.label}</span>: {formatCurrency(spent)} / {formatCurrency(cat.budget!)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Aviso anticipado: cerca del presupuesto (80-100%) */}
+            {nearBudgetCategories.length > 0 && (
+              <div className="mx-4 flex flex-col gap-2 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+                {nearBudgetCategories.map(({ cat, spent }) => (
+                  <div key={cat.id} className="flex items-center gap-3">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-600" />
+                    <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-500">
+                      Estás cerca del presupuesto de <span className="font-extrabold">{cat.emoji} {cat.label}</span>: {formatCurrency(spent)} / {formatCurrency(cat.budget!)}
                     </p>
                   </div>
                 ))}
