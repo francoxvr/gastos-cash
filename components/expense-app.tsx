@@ -17,7 +17,7 @@ import { useAuth } from "@/context/auth-context"
 import { formatCurrency, exportToCSV, exportMonthlyReportPDF, parseCSVImport, toBaseAmount, type Expense } from "@/lib/expenses"
 import {
   Plus, BarChart3, CalendarDays, MoreHorizontal, Home,
-  Sun, Moon, Monitor, Download, Trash2, LogOut, ChevronRight, ChevronLeft, Tag, Wallet, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target, Zap, Upload, TrendingUp, TrendingDown, Heart,
+  Sun, Moon, Monitor, Download, Trash2, LogOut, ChevronRight, ChevronLeft, Tag, Sparkles, Search, AlertTriangle, Repeat, X, Coins, Users, PiggyBank, Bell, BellOff, FileText, Target, Zap, Upload, TrendingUp, TrendingDown, Heart,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -130,6 +130,17 @@ export function ExpenseApp() {
     }).reduce((sum, e) => sum + toBaseAmount(e), 0),
     [expenses, currentMonth, currentYear]
   )
+
+  const projection = useMemo(() => {
+    if (!isCurrentMonth || monthTotal === 0) return null
+    const today = now.getDate()
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+    const remaining = daysInMonth - today
+    if (remaining <= 0) return null
+    const dailyAvg = monthTotal / today
+    const projected = monthTotal + dailyAvg * remaining
+    return { projected, dailyAvg, remaining, daysInMonth }
+  }, [monthTotal, currentMonth, currentYear, isCurrentMonth, now])
 
   const healthData = useMemo(() => {
     if (monthIncomeTotal === 0 && monthTotal === 0) return null
@@ -295,9 +306,7 @@ export function ExpenseApp() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-2xl gradient-brand flex items-center justify-center shadow-lg shadow-primary/25">
-            <Wallet className="h-[18px] w-[18px] text-primary-foreground" strokeWidth={2.5} />
-          </div>
+          <img src="/icon-192.png" alt="Gastos Cash" className="h-9 w-9 rounded-2xl shadow-lg shadow-primary/25" />
           <span className="font-extrabold text-base tracking-tight">Gastos Cash</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -420,6 +429,31 @@ export function ExpenseApp() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{healthData.tip}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Proyección fin de mes */}
+            {projection && timeFilter === "mes" && (
+              <div className="mx-4 rounded-3xl surface-card p-4 flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex flex-1 flex-col gap-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Proyección</span>
+                    <span className={`text-sm font-black ${monthlyBudget && projection.projected > monthlyBudget ? "text-destructive" : "text-foreground"}`}>
+                      {formatCurrency(projection.projected)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(projection.dailyAvg)}/día · quedan {projection.remaining} días
+                    {monthlyBudget
+                      ? projection.projected > monthlyBudget
+                        ? ` · excederás el presupuesto por ${formatCurrency(projection.projected - monthlyBudget)}`
+                        : ` · vas a quedar ${formatCurrency(monthlyBudget - projection.projected)} bajo presupuesto`
+                      : ""}
+                  </p>
                 </div>
               </div>
             )}

@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { useExpenses } from "@/context/expense-context"
 import { formatCurrency, formatDate, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { Pencil, Trash2, ChevronDown } from "lucide-react"
+import { Pencil, Trash2, ChevronDown, Copy } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,8 @@ interface ExpenseListProps {
 }
 
 export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, sortOrder = "date-desc" }: ExpenseListProps) {
-  const { expenses, deleteExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
+  const { expenses, deleteExpense, addExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
@@ -169,6 +170,26 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
                       <Pencil className="h-4 w-4 text-primary-foreground" />
                     </div>
                     Editar
+                  </button>
+
+                  <div className="w-[1px] bg-white/15 my-4" />
+
+                  <button
+                    onClick={async () => {
+                      const today = new Date().toISOString().split("T")[0]
+                      const { id, ...rest } = expense
+                      await addExpense({ ...rest, date: today })
+                      setCopiedId(expense.id)
+                      setTimeout(() => setCopiedId(null), 1500)
+                      setExpandedId(null)
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
+                      bg-black/15 hover:bg-black/25 text-primary-foreground"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 shadow-lg">
+                      <Copy className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    {copiedId === expense.id ? "¡Listo!" : "Duplicar"}
                   </button>
 
                   {/* Divisor */}
