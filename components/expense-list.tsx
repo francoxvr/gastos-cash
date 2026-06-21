@@ -39,6 +39,7 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
     const cat = getCategoryById(e.category)
     return (
       e.description?.toLowerCase().includes(query) ||
+      e.notes?.toLowerCase().includes(query) ||
       cat?.label.toLowerCase().includes(query) ||
       (e.type === "income" && "ingreso".includes(query))
     )

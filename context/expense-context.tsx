@@ -152,6 +152,9 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    // Por defecto operamos sobre el propio hogar hasta que se resuelva el perfil real;
+    // evita que un addExpense disparado muy temprano use un householdId vacío.
+    setHouseholdId(prev => prev || user.uid)
     try {
       // Resolvemos el perfil del usuario para saber a qué "hogar" pertenece
       // (por defecto, el suyo propio: householdId === uid).

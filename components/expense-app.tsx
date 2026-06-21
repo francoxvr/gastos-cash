@@ -188,6 +188,15 @@ export function ExpenseApp() {
     return best ? { ...best, cat: getCategoryById(best.id) } : null
   }, [periodExpenses, getCategoryById])
 
+  const biggestExpense = useMemo(() => {
+    let best: Expense | null = null
+    for (const e of periodExpenses) {
+      if (e.type === "income") continue
+      if (!best || toBaseAmount(e) > toBaseAmount(best)) best = e
+    }
+    return best
+  }, [periodExpenses])
+
   const overBudgetCategories = useMemo(() => {
     const spent = new Map<string, number>()
     for (const e of expenses) {
@@ -437,6 +446,22 @@ export function ExpenseApp() {
                 )}
               </div>
             </div>
+
+            {/* Mayor gasto del período */}
+            {biggestExpense && (
+              <div className="mx-4 flex items-center gap-3 rounded-2xl surface-card p-4 shadow-lg">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-lg">
+                  {getCategoryById(biggestExpense.category)?.emoji || "💸"}
+                </div>
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Mayor gasto · {periodLabel[timeFilter]}</span>
+                  <span className="text-sm font-bold truncate">
+                    {biggestExpense.description || getCategoryById(biggestExpense.category)?.label || "Sin descripción"}
+                  </span>
+                </div>
+                <span className="shrink-0 font-black tabular-nums">{formatCurrency(toBaseAmount(biggestExpense))}</span>
+              </div>
+            )}
 
             {/* Widget de salud financiera */}
             {healthData && (
