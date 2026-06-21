@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,22 +38,49 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
   )
   const [notes, setNotes] = useState(isEditing ? (editingExpense.notes || "") : "")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const amountInputRef = useRef<HTMLInputElement>(null)
 
   const selectedCurrency = getCurrencyByCode(currencyCode)
 
-  const isInvalid = !amount || Number.parseFloat(amount) <= 0
+  // Modo calculadora: si el usuario escribió algún operador, tratamos el campo como expresión
+  const isExpression = /[+\-*/]/.test(amount)
+
+  // Evalúa expresiones aritméticas simples de forma segura (solo dígitos, operadores y paréntesis)
+  const evaluateExpression = (expr: string): number | null => {
+    if (!/^[\d.+\-*/() \s]+$/.test(expr)) return null
+    if (!expr.trim() || /[+\-*/]\s*$/.test(expr.trim())) return null
+    try {
+      // eslint-disable-next-line no-new-func
+      const result = Function(`"use strict"; return (${expr})`)()
+      return typeof result === "number" && isFinite(result) ? result : null
+    } catch {
+      return null
+    }
+  }
+
+  const calcResult = isExpression ? evaluateExpression(amount) : null
+  const finalAmount = isExpression ? calcResult : Number.parseFloat(amount)
+
+  const isInvalid = !finalAmount || finalAmount <= 0
 
   // Formatea el monto para mostrarlo con puntos de mil (ej: 700000 -> 700.000)
   const formatAmountDisplay = (value: string) => {
     if (!value) return ""
+    if (isExpression) return value
     const [intPart, decPart] = value.split(".")
     const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
     return decPart !== undefined ? `${formattedInt},${decPart}` : formattedInt
   }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    if (/[+\-*/]/.test(value)) {
+      // Modo calculadora: permitir dígitos, operadores, punto y paréntesis tal cual se escriben
+      setAmount(value.replace(/[^0-9+\-*/.() ]/g, ""))
+      return
+    }
     // Quita los puntos de mil y convierte la coma decimal en punto
-    let cleaned = e.target.value.replace(/\./g, "").replace(",", ".")
+    let cleaned = value.replace(/\./g, "").replace(",", ".")
     cleaned = cleaned.replace(/[^0-9.]/g, "")
     const parts = cleaned.split(".")
     if (parts.length > 2) cleaned = parts[0] + "." + parts.slice(1).join("")
@@ -67,7 +94,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
     setIsSubmitting(true)
 
     const expenseData = {
-      amount: Number.parseFloat(amount),
+      amount: finalAmount as number,
       category: type === "income" ? "" : category,
       date,
       description: description.trim(), // Ahora permitimos que sea opcional sin forzar el nombre de la categoría aquí, ya que el ExpenseList lo maneja
@@ -75,7 +102,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       currency: selectedCurrency.code,
       exchangeRate: selectedCurrency.rateToBase,
       paidBy: paidBy || user?.uid || "",
-      notes: notes.trim() || undefined,
+      ...(notes.trim() ? { notes: notes.trim() } : {}),
     }
 
     if (isEditing && editingExpense) {
@@ -133,6 +160,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
           <div className="relative flex items-center justify-center">
             <span className="absolute -left-8 text-4xl font-black opacity-20">{selectedCurrency.symbol}</span>
             <input
+              ref={amountInputRef}
               type="text"
               inputMode="decimal"
               placeholder="0"
@@ -143,7 +171,37 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               required
             />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{type === "income" ? "Monto del ingreso" : "Monto del gasto"}</p>
+          {isExpression && calcResult !== null ? (
+            <p className="text-sm font-black text-primary">= {selectedCurrency.symbol} {new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(calcResult)}</p>
+          ) : (
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{type === "income" ? "Monto del ingreso" : "Monto del gasto"}</p>
+          )}
+
+          {/* Operadores de calculadora (el teclado numérico móvil no los tiene) */}
+          <div className="mt-1 flex gap-2">
+            {([["+","+"],["-","−"],["*","×"],["/","÷"]] as const).map(([op, symbol]) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => {
+                  if (!amount || /[+\-*/]\s*$/.test(amount)) return
+                  const next = amount + op
+                  setAmount(next)
+                  requestAnimationFrame(() => {
+                    const el = amountInputRef.current
+                    if (el) {
+                      el.focus()
+                      const pos = formatAmountDisplay(next).length
+                      el.setSelectionRange(pos, pos)
+                    }
+                  })
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full surface-card text-base font-bold text-muted-foreground active-press"
+              >
+                {symbol}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Selector de moneda (solo si hay más de una configurada) */}
