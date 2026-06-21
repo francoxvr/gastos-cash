@@ -142,6 +142,29 @@ export function ExpenseApp() {
     return { projected, dailyAvg, remaining, daysInMonth }
   }, [monthTotal, currentMonth, currentYear, isCurrentMonth, now])
 
+  const streak = useMemo(() => {
+    if (!monthlyBudget || monthlyBudget <= 0 || !isCurrentMonth) return null
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+    const dailyBudget = monthlyBudget / daysInMonth
+
+    const dailyTotals = new Map<number, number>()
+    expenses.forEach((e) => {
+      if (e.type === "income") return
+      const [y, m, d] = e.date.split("-").map(Number)
+      if (m - 1 === currentMonth && y === currentYear) {
+        dailyTotals.set(d, (dailyTotals.get(d) || 0) + toBaseAmount(e))
+      }
+    })
+
+    let count = 0
+    for (let day = now.getDate() - 1; day >= 1; day--) {
+      const spent = dailyTotals.get(day) || 0
+      if (spent <= dailyBudget) count++
+      else break
+    }
+    return { count, dailyBudget }
+  }, [expenses, monthlyBudget, currentMonth, currentYear, isCurrentMonth, now])
+
   const healthData = useMemo(() => {
     if (monthIncomeTotal === 0 && monthTotal === 0) return null
     const savingsRate = monthIncomeTotal > 0 ? ((monthIncomeTotal - monthTotal) / monthIncomeTotal) * 100 : -100
@@ -487,6 +510,14 @@ export function ExpenseApp() {
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                     Superaste el presupuesto por {formatCurrency(monthTotal - monthlyBudget)}
                   </p>
+                )}
+                {streak && streak.count > 0 && (
+                  <div className="flex items-center gap-1.5 rounded-2xl bg-orange-500/10 px-3 py-2">
+                    <span className="text-base">🔥</span>
+                    <p className="text-xs font-bold text-orange-500">
+                      {streak.count} {streak.count === 1 ? "día" : "días"} seguidos dentro del presupuesto diario ({formatCurrency(streak.dailyBudget)})
+                    </p>
+                  </div>
                 )}
               </div>
             )}
