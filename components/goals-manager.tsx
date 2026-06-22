@@ -77,6 +77,19 @@ export function GoalsManager({ onClose }: GoalsManagerProps) {
     setDeleteTarget(null)
   }
 
+  // Calcula cuánto hay que ahorrar por semana para llegar a la meta en la fecha elegida
+  const getProjection = (goal: { targetAmount: number; savedAmount: number; targetDate?: string | null }) => {
+    if (!goal.targetDate) return null
+    const remaining = goal.targetAmount - goal.savedAmount
+    if (remaining <= 0) return null
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const target = new Date(goal.targetDate + "T00:00:00")
+    const daysLeft = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const expired = daysLeft <= 0
+    const weekly = expired ? 0 : remaining / (daysLeft / 7)
+    return { expired, remaining, daysLeft, weekly }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background animate-fade-in">
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background/80 px-4 py-4 backdrop-blur-md">
@@ -146,6 +159,20 @@ export function GoalsManager({ onClose }: GoalsManagerProps) {
                     />
                   </div>
                 </div>
+
+                {!isComplete && (() => {
+                  const projection = getProjection(goal)
+                  if (!projection) return null
+                  return projection.expired ? (
+                    <p className="text-xs font-semibold text-destructive">
+                      Pasaste la fecha objetivo · faltan {formatCurrency(projection.remaining, symbol)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Necesitás ahorrar <span className="font-bold text-foreground">{formatCurrency(projection.weekly, symbol)}/semana</span> para llegar a tiempo ({projection.daysLeft} días)
+                    </p>
+                  )
+                })()}
 
                 {isContributing ? (
                   <div className="flex items-center gap-2">
