@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef } from "react"
 import { useExpenses } from "@/context/expense-context"
 import { formatCurrency, formatDate, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { Pencil, Trash2, ChevronDown, Copy } from "lucide-react"
+import { Pencil, Trash2, ChevronDown, Copy, Undo2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +30,8 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
+  const [undoExpense, setUndoExpense] = useState<Expense | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const query = searchQuery.trim().toLowerCase()
   const visibleExpenses = expenses.filter((e) => {
@@ -43,7 +45,8 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
       cat?.label.toLowerCase().includes(query) ||
       (e.type === "income" && "ingreso".includes(query)) ||
       e.amount.toString().includes(query) ||
-      Math.round(toBaseAmount(e)).toString().includes(query)
+      Math.round(toBaseAmount(e)).toString().includes(query) ||
+      e.tags?.some((t) => t.toLowerCase().includes(query.replace(/^#/, "")))
     )
   })
 
@@ -60,37 +63,41 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
   const handleDelete = async () => {
     if (deleteTarget) {
       await deleteExpense(deleteTarget.id)
-      setDeleteTarget(null)
       setExpandedId(null)
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      setUndoExpense(deleteTarget)
+      undoTimerRef.current = setTimeout(() => setUndoExpense(null), 5000)
+      setDeleteTarget(null)
     }
   }
 
-  if (expenses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
-          ☕
-        </div>
-        <p className="text-muted-foreground font-medium">No hay gastos registrados aún</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Toca el botón "+" para empezar</p>
-      </div>
-    )
-  }
-
-  if (sortedExpenses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
-          🔍
-        </div>
-        <p className="text-muted-foreground font-medium">Sin resultados</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Probá con otra búsqueda</p>
-      </div>
-    )
+  const handleUndo = async () => {
+    if (!undoExpense) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    const { id, ...rest } = undoExpense
+    setUndoExpense(null)
+    await addExpense(rest)
   }
 
   return (
     <>
+      {expenses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
+            ☕
+          </div>
+          <p className="text-muted-foreground font-medium">No hay gastos registrados aún</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Toca el botón "+" para empezar</p>
+        </div>
+      ) : sortedExpenses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 text-4xl">
+            🔍
+          </div>
+          <p className="text-muted-foreground font-medium">Sin resultados</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Probá con otra búsqueda</p>
+        </div>
+      ) : (
       <div className="flex flex-col gap-3">
         {sortedExpenses.slice(0, 30).map((expense, index) => {
           const cat = getCategoryById(expense.category)
@@ -156,8 +163,19 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
 
               {/* Nota expandida */}
               {isExpanded && expense.notes && (
-                <div className="px-4 pb-3 pt-1 text-xs text-primary-foreground/80 italic border-t border-white/10">
+                <div className="px-4 pb-1 pt-3 text-xs text-primary-foreground/80 italic border-t border-white/10">
                   {expense.notes}
+                </div>
+              )}
+
+              {/* Etiquetas */}
+              {isExpanded && expense.tags && expense.tags.length > 0 && (
+                <div className={`flex flex-wrap gap-1.5 px-4 pb-3 ${expense.notes ? "pt-2" : "pt-3 border-t border-white/10"}`}>
+                  {expense.tags.map((t) => (
+                    <span key={t} className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold text-primary-foreground">
+                      #{t}
+                    </span>
+                  ))}
                 </div>
               )}
 
@@ -214,6 +232,7 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
           )
         })}
       </div>
+      )}
 
       {/* Confirmación de Borrado */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
@@ -236,6 +255,21 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Toast de "Deshacer" tras eliminar */}
+      {undoExpense && (
+        <div className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between gap-3 rounded-2xl bg-foreground px-4 py-3 shadow-2xl animate-entrance">
+          <span className="text-sm font-medium text-background">
+            {undoExpense.type === "income" ? "Ingreso" : "Gasto"} eliminado
+          </span>
+          <button
+            onClick={handleUndo}
+            className="flex items-center gap-1.5 shrink-0 rounded-xl bg-background/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-background active-press"
+          >
+            <Undo2 className="h-3.5 w-3.5" /> Deshacer
+          </button>
+        </div>
+      )}
     </>
   )
 }

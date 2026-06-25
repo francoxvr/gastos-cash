@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { useExpenses } from "@/context/expense-context"
 import { useAuth } from "@/context/auth-context"
 import type { Expense } from "@/lib/expenses"
-import { ArrowLeft, Check, Calendar as CalendarIcon, Type, StickyNote } from "lucide-react"
+import { ArrowLeft, Check, Calendar as CalendarIcon, Type, StickyNote, Tag, X } from "lucide-react"
 
 interface AddExpenseFormProps {
   onClose: () => void
@@ -37,8 +37,25 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
     isEditing ? (editingExpense.paidBy || user?.uid || "") : (user?.uid || "")
   )
   const [notes, setNotes] = useState(isEditing ? (editingExpense.notes || "") : "")
+  const [tags, setTags] = useState<string[]>(isEditing ? (editingExpense.tags || []) : [])
+  const [tagInput, setTagInput] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
+
+  const addTag = () => {
+    const t = tagInput.trim().replace(/^#/, "")
+    if (t && !tags.includes(t)) setTags([...tags, t])
+    setTagInput("")
+  }
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault()
+      addTag()
+    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+      setTags(tags.slice(0, -1))
+    }
+  }
 
   const selectedCurrency = getCurrencyByCode(currencyCode)
 
@@ -103,6 +120,7 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
       exchangeRate: selectedCurrency.rateToBase,
       paidBy: paidBy || user?.uid || "",
       ...(notes.trim() ? { notes: notes.trim() } : {}),
+      ...(tags.length > 0 ? { tags } : {}),
     }
 
     if (isEditing && editingExpense) {
@@ -301,6 +319,32 @@ export function AddExpenseForm({ onClose, editingExpense }: AddExpenseFormProps)
               rows={2}
               className="w-full rounded-3xl surface-card pl-12 pr-4 pt-4 pb-3 text-base font-bold outline-none ring-primary/20 transition-all focus:ring-4 resize-none"
             />
+          </div>
+
+          {/* Etiquetas */}
+          <div className="relative">
+            <div className="absolute left-4 top-4 text-muted-foreground/50">
+              <Tag className="h-5 w-5" />
+            </div>
+            <div className="flex min-h-16 w-full flex-wrap items-center gap-2 rounded-3xl surface-card pl-12 pr-4 py-3">
+              {tags.map((t) => (
+                <span key={t} className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                  #{t}
+                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))} className="ml-0.5">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                placeholder="Etiquetas (opcional, Enter para agregar)"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={addTag}
+                className="min-w-[120px] flex-1 bg-transparent text-sm font-bold outline-none"
+              />
+            </div>
           </div>
 
           {/* Fecha */}

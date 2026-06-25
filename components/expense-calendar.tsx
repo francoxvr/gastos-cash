@@ -1,10 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef } from "react"
 import { useExpenses } from "@/context/expense-context"
 import { formatCurrency, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Undo2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +27,7 @@ interface ExpenseCalendarProps {
 }
 
 export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
-  const { expenses, getCategoryById, deleteExpense, getCurrencyByCode, getBaseCurrency } = useExpenses()
+  const { expenses, getCategoryById, deleteExpense, addExpense, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const today = new Date()
 
   // Hoy en formato YYYY-MM-DD local
@@ -37,12 +37,25 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
+  const [undoExpense, setUndoExpense] = useState<Expense | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleDelete = async () => {
     if (deleteTarget) {
       await deleteExpense(deleteTarget.id)
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      setUndoExpense(deleteTarget)
+      undoTimerRef.current = setTimeout(() => setUndoExpense(null), 5000)
       setDeleteTarget(null)
     }
+  }
+
+  const handleUndo = async () => {
+    if (!undoExpense) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    const { id, ...rest } = undoExpense
+    setUndoExpense(null)
+    await addExpense(rest)
   }
 
   const expensesByDate = useMemo(() => {
@@ -228,6 +241,19 @@ export function ExpenseCalendar({ onEdit }: ExpenseCalendarProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Toast de "Deshacer" tras eliminar */}
+      {undoExpense && (
+        <div className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between gap-3 rounded-2xl bg-foreground px-4 py-3 shadow-2xl animate-entrance">
+          <span className="text-sm font-medium text-background">Gasto eliminado</span>
+          <button
+            onClick={handleUndo}
+            className="flex items-center gap-1.5 shrink-0 rounded-xl bg-background/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-background active-press"
+          >
+            <Undo2 className="h-3.5 w-3.5" /> Deshacer
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -33,6 +33,7 @@ export interface Expense {
   exchangeRate?: number
   paidBy?: string
   notes?: string
+  tags?: string[]
 }
 
 export interface Category {
