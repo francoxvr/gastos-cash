@@ -2,9 +2,9 @@
 
 import React, { useState, useRef } from "react"
 import { useExpenses } from "@/context/expense-context"
-import { formatCurrency, formatDate, toBaseAmount } from "@/lib/expenses"
+import { formatCurrency, formatDate, formatDateFull, toBaseAmount } from "@/lib/expenses"
 import type { Expense } from "@/lib/expenses"
-import { Pencil, Trash2, ChevronDown, Copy, Undo2 } from "lucide-react"
+import { Pencil, Trash2, ChevronDown, Copy, Undo2, Share2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ interface ExpenseListProps {
 export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, sortOrder = "date-desc" }: ExpenseListProps) {
   const { expenses, deleteExpense, addExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [sharedId, setSharedId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
   const [undoExpense, setUndoExpense] = useState<Expense | null>(null)
@@ -68,6 +69,28 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
       setUndoExpense(deleteTarget)
       undoTimerRef.current = setTimeout(() => setUndoExpense(null), 5000)
       setDeleteTarget(null)
+    }
+  }
+
+  const handleShare = async (expense: Expense) => {
+    const cat = getCategoryById(expense.category)
+    const isIncome = expense.type === "income"
+    const currency = getCurrencyByCode(expense.currency)
+    const label = isIncome ? "Ingreso" : (cat?.label || "Sin categoría")
+    const lines = [
+      `${isIncome ? "💰" : cat?.emoji || "💸"} ${formatCurrency(expense.amount, currency.symbol)} · ${label}`,
+      formatDateFull(expense.date),
+    ]
+    if (expense.description) lines.push(expense.description)
+    if (expense.notes) lines.push(expense.notes)
+    const text = lines.join("\n")
+
+    if (navigator.share) {
+      try { await navigator.share({ text }) } catch { /* usuario canceló */ }
+    } else {
+      await navigator.clipboard.writeText(text)
+      setSharedId(expense.id)
+      setTimeout(() => setSharedId(null), 1500)
     }
   }
 
@@ -181,19 +204,17 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
 
               {/* Acciones Expandibles */}
               {isExpanded && (
-                <div className="flex border-t border-white/15 animate-slide-down">
+                <div className="grid grid-cols-2 border-t border-white/15 animate-slide-down">
                   <button
                     onClick={() => { onEdit(expense); setExpandedId(null); }}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
+                    className="flex items-center justify-center gap-2 py-3.5 border-b border-r border-white/15 text-xs font-black uppercase tracking-wide transition-all active-press
                       bg-black/15 hover:bg-black/25 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 shadow-lg">
-                      <Pencil className="h-4 w-4 text-primary-foreground" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20 shadow-lg">
+                      <Pencil className="h-3.5 w-3.5 text-primary-foreground" />
                     </div>
                     Editar
                   </button>
-
-                  <div className="w-[1px] bg-white/15 my-4" />
 
                   <button
                     onClick={async () => {
@@ -204,25 +225,33 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
                       setTimeout(() => setCopiedId(null), 1500)
                       setExpandedId(null)
                     }}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
+                    className="flex items-center justify-center gap-2 py-3.5 border-b border-white/15 text-xs font-black uppercase tracking-wide transition-all active-press
                       bg-black/15 hover:bg-black/25 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 shadow-lg">
-                      <Copy className="h-4 w-4 text-primary-foreground" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20 shadow-lg">
+                      <Copy className="h-3.5 w-3.5 text-primary-foreground" />
                     </div>
                     {copiedId === expense.id ? "¡Listo!" : "Duplicar"}
                   </button>
 
-                  {/* Divisor */}
-                  <div className="w-[1px] bg-white/15 my-4" />
+                  <button
+                    onClick={() => handleShare(expense)}
+                    className="flex items-center justify-center gap-2 py-3.5 border-r border-white/15 text-xs font-black uppercase tracking-wide transition-all active-press
+                      bg-black/15 hover:bg-black/25 text-primary-foreground"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20 shadow-lg">
+                      <Share2 className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                    {sharedId === expense.id ? "¡Copiado!" : "Compartir"}
+                  </button>
 
                   <button
                     onClick={() => setDeleteTarget(expense)}
-                    className="flex flex-1 items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all active-press
+                    className="flex items-center justify-center gap-2 py-3.5 text-xs font-black uppercase tracking-wide transition-all active-press
                       bg-destructive/25 hover:bg-destructive/35 text-primary-foreground"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/40 shadow-lg">
-                      <Trash2 className="h-4 w-4 text-primary-foreground" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/40 shadow-lg">
+                      <Trash2 className="h-3.5 w-3.5 text-primary-foreground" />
                     </div>
                     Eliminar
                   </button>
