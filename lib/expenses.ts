@@ -213,5 +213,17 @@ export async function exportMonthlyReportPDF(
     }
   })
 
-  doc.save(`gastos-cash-${MONTH_NAMES[month].toLowerCase()}-${year}.pdf`)
+  const fileName = `gastos-cash-${MONTH_NAMES[month].toLowerCase()}-${year}.pdf`
+  const blob = doc.output("blob")
+  const file = new File([blob], fileName, { type: "application/pdf" })
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: `Reporte ${MONTH_NAMES[month]} ${year}` })
+      return
+    } catch {
+      // El usuario canceló el share o falló; seguimos con la descarga normal.
+    }
+  }
+  doc.save(fileName)
 }

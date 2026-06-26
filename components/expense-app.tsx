@@ -700,7 +700,13 @@ export function ExpenseApp() {
                 ))}
               </div>
 
-              <ExpenseList onEdit={openEdit} searchQuery={searchQuery} categoryFilter={categoryFilter} sortOrder={sortOrder} />
+              <ExpenseList
+                onEdit={openEdit}
+                searchQuery={searchQuery}
+                categoryFilter={categoryFilter}
+                sortOrder={sortOrder}
+                onTagClick={(tag) => { setCategoryFilter(null); setSearchQuery(tag) }}
+              />
             </div>
           </div>
         )}

@@ -23,9 +23,10 @@ interface ExpenseListProps {
   searchQuery?: string
   categoryFilter?: string | null
   sortOrder?: SortOrder
+  onTagClick?: (tag: string) => void
 }
 
-export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, sortOrder = "date-desc" }: ExpenseListProps) {
+export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, sortOrder = "date-desc", onTagClick }: ExpenseListProps) {
   const { expenses, deleteExpense, addExpense, getCategoryById, getCurrencyByCode, getBaseCurrency } = useExpenses()
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [sharedId, setSharedId] = useState<string | null>(null)
@@ -195,9 +196,14 @@ export function ExpenseList({ onEdit, searchQuery = "", categoryFilter = null, s
               {isExpanded && expense.tags && expense.tags.length > 0 && (
                 <div className={`flex flex-wrap gap-1.5 px-4 pb-3 ${expense.notes ? "pt-2" : "pt-3 border-t border-white/10"}`}>
                   {expense.tags.map((t) => (
-                    <span key={t} className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold text-primary-foreground">
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => onTagClick?.(t)}
+                      className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold text-primary-foreground active-press"
+                    >
                       #{t}
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
