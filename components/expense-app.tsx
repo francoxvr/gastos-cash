@@ -165,6 +165,14 @@ export function ExpenseApp() {
     return { count, dailyBudget }
   }, [expenses, monthlyBudget, currentMonth, currentYear, isCurrentMonth, now])
 
+  const daysSinceLastEntry = useMemo(() => {
+    if (expenses.length === 0) return null
+    const lastDate = expenses.reduce((latest, e) => (e.date > latest ? e.date : latest), expenses[0].date)
+    const last = new Date(lastDate + "T00:00:00")
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    return Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
+  }, [expenses])
+
   const healthData = useMemo(() => {
     if (monthIncomeTotal === 0 && monthTotal === 0) return null
     const savingsRate = monthIncomeTotal > 0 ? ((monthIncomeTotal - monthTotal) / monthIncomeTotal) * 100 : -100
@@ -474,6 +482,16 @@ export function ExpenseApp() {
                   </span>
                 </div>
                 <span className="shrink-0 font-black tabular-nums">{formatCurrency(toBaseAmount(biggestExpense))}</span>
+              </div>
+            )}
+
+            {/* Recordatorio si pasaron varios días sin registrar nada */}
+            {daysSinceLastEntry !== null && daysSinceLastEntry >= 2 && (
+              <div className="mx-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                <p className="text-xs font-semibold text-primary">
+                  Hace {daysSinceLastEntry} días que no registrás movimientos. ¡Sumá los de hoy para no perder el hilo!
+                </p>
               </div>
             )}
 
