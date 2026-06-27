@@ -11,6 +11,7 @@ import { CurrencyManager } from "@/components/currency-manager"
 import { SharedAccountManager } from "@/components/shared-account-manager"
 import { GoalsManager } from "@/components/goals-manager"
 import { ShortcutsManager } from "@/components/shortcuts-manager"
+import InstallPrompt from "@/components/InstallPrompt"
 import { useExpenses } from "@/context/expense-context"
 import { useTheme } from "@/context/theme-context"
 import { useAuth } from "@/context/auth-context"
@@ -748,6 +749,8 @@ export function ExpenseApp() {
         {tab === "more" && (
           <div className="flex flex-col px-4 pt-2 pb-6 gap-3 animate-fade-in">
             <p className="text-xl font-extrabold mb-1">Ajustes</p>
+
+            <InstallPrompt />
 
             {/* User info */}
             <div className="flex items-center gap-3 rounded-2xl surface-card p-4">

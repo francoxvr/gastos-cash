@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Loader2, Sun, Moon } from "lucide-react"
 import Link from "next/link"
+import InstallPrompt from "@/components/InstallPrompt"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -93,6 +94,8 @@ export default function LoginPage() {
           <h1 className="text-3xl font-extrabold tracking-tight">Bienvenido a Gastos Cash</h1>
           <p className="mt-2 text-muted-foreground">Inicia sesión en tu cuenta</p>
         </div>
+
+        <InstallPrompt />
 
         {/* Botón de Google */}
         <button

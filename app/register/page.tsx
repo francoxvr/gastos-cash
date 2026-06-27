@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2, Sun, Moon } from "lucide-react"
 import Link from "next/link"
+import InstallPrompt from "@/components/InstallPrompt"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -76,6 +77,8 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-extrabold tracking-tight">Crear cuenta</h1>
           <p className="mt-2 text-muted-foreground">Comienza a controlar tus gastos</p>
         </div>
+
+        <InstallPrompt />
 
         {/* Formulario de registro */}
         <form onSubmit={handleSubmit} className="space-y-5">
