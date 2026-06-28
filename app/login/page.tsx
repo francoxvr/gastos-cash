@@ -179,6 +179,12 @@ export default function LoginPage() {
             ¿No tienes cuenta? <Link href="/register" className="text-primary font-bold hover:underline">Regístrate</Link>
           </p>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground/70">
+          Al continuar aceptás los{" "}
+          <Link href="/terms" className="underline hover:text-foreground">Términos de Servicio</Link> y la{" "}
+          <Link href="/privacy" className="underline hover:text-foreground">Política de Privacidad</Link>.
+        </p>
       </div>
     </div>
   )

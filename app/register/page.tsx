@@ -157,6 +157,12 @@ export default function RegisterPage() {
             ¿Ya tienes cuenta? <Link href="/login" className="text-primary font-bold hover:underline">Inicia sesión</Link>
           </p>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground/70">
+          Al registrarte aceptás los{" "}
+          <Link href="/terms" className="underline hover:text-foreground">Términos de Servicio</Link> y la{" "}
+          <Link href="/privacy" className="underline hover:text-foreground">Política de Privacidad</Link>.
+        </p>
       </div>
     </div>
   )
