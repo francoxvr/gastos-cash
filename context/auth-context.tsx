@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword }}>
       {!loading ? children : (
-        <div className="flex h-screen items-center justify-center bg-background">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="flex h-screen items-center justify-center gradient-mesh">
+          <img src="/icon-512.png" alt="Gastos Cash" className="h-20 w-20 rounded-3xl shadow-2xl animate-pulse" />
         </div>
       )}
     </AuthContext.Provider>
